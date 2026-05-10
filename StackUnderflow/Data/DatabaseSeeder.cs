@@ -1,5 +1,4 @@
 using Microsoft.AspNetCore.Identity;
-using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using StackUnderflow.Models;
 
@@ -20,58 +19,7 @@ public static class DatabaseSeeder
         }
 
         var dbContext = services.GetRequiredService<ApplicationDbContext>();
-
-        if (dbContext.Database.IsSqlite())
-        {
-            try
-            {
-                await dbContext.Database.EnsureCreatedAsync(cancellationToken);
-            }
-            catch (SqliteException ex) when (ex.SqliteErrorCode == 11) // SQLITE_CORRUPT
-            {
-                string? dataSource = null;
-                try
-                {
-                    dataSource = new SqliteConnectionStringBuilder(dbContext.Database.GetDbConnection().ConnectionString).DataSource;
-                }
-                catch
-                {
-                    dataSource = dbContext.Database.GetDbConnection().DataSource;
-                }
-
-                if (!string.IsNullOrWhiteSpace(dataSource) &&
-                    !string.Equals(dataSource, ":memory:", StringComparison.OrdinalIgnoreCase))
-                {
-                    var candidatePaths = new[]
-                    {
-                        dataSource,
-                        Path.GetFullPath(dataSource, Directory.GetCurrentDirectory()),
-                        Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, dataSource)),
-                        Path.GetFullPath(Path.Combine(environment.ContentRootPath, dataSource)),
-                    }.Distinct();
-
-                    foreach (var candidatePath in candidatePaths)
-                    {
-                        if (!File.Exists(candidatePath))
-                        {
-                            continue;
-                        }
-
-                        await dbContext.Database.CloseConnectionAsync();
-                        File.Delete(candidatePath);
-                        File.Delete($"{candidatePath}-wal");
-                        File.Delete($"{candidatePath}-shm");
-                        break;
-                    }
-                }
-
-                await dbContext.Database.EnsureCreatedAsync(cancellationToken);
-            }
-        }
-        else
-        {
-            await dbContext.Database.MigrateAsync(cancellationToken);
-        }
+        await dbContext.Database.MigrateAsync(cancellationToken);
 
         var userManager = services.GetRequiredService<UserManager<User>>();
         var now = DateTime.UtcNow;
