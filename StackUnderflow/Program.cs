@@ -6,10 +6,25 @@ using StackUnderflow.Models;
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
-var connectionString = builder.Configuration.GetConnectionString("ServerConnection") ??
-                       throw new InvalidOperationException("Connection string 'ServerConnection' not found.");
+var sqliteConnectionString = builder.Configuration.GetConnectionString("SqliteConnection");
+var sqlServerConnectionString = builder.Configuration.GetConnectionString("ServerConnection");
+
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseSqlServer(connectionString));
+{
+    if (builder.Environment.IsDevelopment() && !string.IsNullOrWhiteSpace(sqliteConnectionString))
+    {
+        options.UseSqlite(sqliteConnectionString);
+        return;
+    }
+
+    if (!string.IsNullOrWhiteSpace(sqlServerConnectionString))
+    {
+        options.UseSqlServer(sqlServerConnectionString);
+        return;
+    }
+
+    throw new InvalidOperationException("No database connection string configured.");
+});
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 
 builder.Services.AddDefaultIdentity<User>(options => options.SignIn.RequireConfirmedAccount = true)
@@ -17,6 +32,11 @@ builder.Services.AddDefaultIdentity<User>(options => options.SignIn.RequireConfi
 builder.Services.AddControllersWithViews();
 
 var app = builder.Build();
+
+using (var scope = app.Services.CreateScope())
+{
+    await DatabaseSeeder.SeedAsync(scope.ServiceProvider, app.Configuration, app.Environment);
+}
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
