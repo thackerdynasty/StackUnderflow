@@ -30,7 +30,7 @@ public static class DatabaseSeeder
         var alice = await EnsureUserAsync(
             userManager,
             email: "alice@example.com",
-            userName: "alice",
+            userName: "alice@example.com",
             password: defaultPassword,
             bio: "I write questions that accidentally become documentation.",
             profilePicture: new Uri("https://example.com/alice.png"),
@@ -40,7 +40,7 @@ public static class DatabaseSeeder
         var bob = await EnsureUserAsync(
             userManager,
             email: "bob@example.com",
-            userName: "bob",
+            userName: "bob@example.com",
             password: defaultPassword,
             bio: "I answer fast, then edit later.",
             profilePicture: new Uri("https://example.com/bob.png"),
@@ -131,6 +131,12 @@ public static class DatabaseSeeder
         if (!user.EmailConfirmed)
         {
             user.EmailConfirmed = true;
+            updated = true;
+        }
+
+        if (!string.Equals(user.UserName, userName, StringComparison.Ordinal))
+        {
+            user.UserName = userName;
             updated = true;
         }
 
