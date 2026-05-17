@@ -1,8 +1,77 @@
-﻿@{
-    ViewData["Title"] = "Home Page";
+﻿@model List<SUThread>
+
+@{
+    ViewData["Title"] = "Top Questions";
 }
 
-<div class="text-center">
-    <h1 class="display-4">Welcome</h1>
-    <p>Learn about <a href="https://learn.microsoft.com/aspnet/core">building Web apps with ASP.NET Core</a>.</p>
-</div>
+<section class="questions-shell">
+    <div class="questions-header">
+        <div>
+            <h1>Top Questions</h1>
+            <p>Browse the highest voted StackUnderflow threads.</p>
+        </div>
+        <a class="btn btn-primary ask-button" href="#">Ask Question</a>
+    </div>
+
+    <div class="question-tabs" aria-label="Question filters">
+        <span class="question-tab active">Interesting</span>
+        <span class="question-tab">Bountied</span>
+        <span class="question-tab">Hot</span>
+        <span class="question-tab">Week</span>
+        <span class="question-tab">Month</span>
+    </div>
+
+    @if (Model.Count == 0)
+    {
+        <div class="empty-questions">
+            <h2>No questions yet</h2>
+            <p>Threads will appear here after they are added.</p>
+        </div>
+    }
+    else
+    {
+        <div class="question-list">
+            @foreach (var thread in Model)
+            {
+                var answerCount = thread.Posts?.Count ?? 0;
+                var score = thread.UpvoteCount - thread.DownvoteCount;
+                var authorName = thread.User?.UserName ?? "unknown user";
+                var excerpt = thread.Content.Length > 220
+                    ? $"{thread.Content[..220]}..."
+                    : thread.Content;
+
+                <article class="question-summary">
+                    <div class="question-stats" aria-label="Question stats">
+                        <div class="stat">
+                            <strong>@score</strong>
+                            <span>votes</span>
+                        </div>
+                        <div class="stat answer-stat @(thread.IsSolved ? "answered accepted" : answerCount > 0 ? "answered" : "")">
+                            <strong>@answerCount</strong>
+                            <span>@(answerCount == 1 ? "answer" : "answers")</span>
+                        </div>
+                        <div class="stat muted">
+                            <strong>@thread.ViewCount</strong>
+                            <span>views</span>
+                        </div>
+                    </div>
+
+                    <div class="question-content">
+                        <h2>
+                            <a asp-controller="Thread" asp-action="Detail" asp-route-id="@thread.Id">@thread.Title</a>
+                        </h2>
+                        <p>@excerpt</p>
+                        <div class="question-meta">
+                            @if (thread.IsSolved)
+                            {
+                                <span class="status-pill">Solved</span>
+                            }
+                            <span>asked @thread.CreatedAt.ToString("MMM d, yyyy")</span>
+                            <span>by @authorName</span>
+                        </div>
+                    </div>
+                </article>
+            }
+        </div>
+    }
+</section>
