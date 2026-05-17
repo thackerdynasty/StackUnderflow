@@ -18,6 +18,11 @@ builder.Services.AddControllersWithViews();
 
 var app = builder.Build();
 
+using (var scope = app.Services.CreateScope())
+{
+    await DatabaseSeeder.SeedAsync(scope.ServiceProvider, app.Configuration, app.Environment);
+}
+
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
