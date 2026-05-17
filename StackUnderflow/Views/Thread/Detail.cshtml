@@ -1,0 +1,146 @@
+@model SUThread
+
+@{
+    ViewData["Title"] = Model.Title;
+    var questionScore = Model.UpvoteCount - Model.DownvoteCount;
+    var answerCount = Model.Posts?.Count ?? 0;
+    var authorName = Model.User?.UserName ?? "unknown user";
+    var posts = (Model.Posts ?? Array.Empty<Post>())
+        .OrderByDescending(post => post.IsAcceptedAnswer)
+        .ThenByDescending(post => post.Upvotes - post.Downvotes)
+        .ThenBy(post => post.CreatedAt)
+        .ToList();
+}
+
+<section class="thread-detail">
+    <header class="thread-header">
+        <div>
+            <h1>@Model.Title</h1>
+            <div class="thread-facts">
+                <span>Asked @Model.CreatedAt.ToString("MMM d, yyyy")</span>
+                <span>Modified @Model.UpdatedAt.ToString("MMM d, yyyy")</span>
+                <span>Viewed @Model.ViewCount @(Model.ViewCount == 1 ? "time" : "times")</span>
+            </div>
+        </div>
+        <a class="btn btn-primary ask-button" href="#">Ask Question</a>
+    </header>
+
+    <article class="thread-post">
+        <aside class="vote-column" aria-label="Question score">
+            <div class="vote-control" aria-hidden="true">▲</div>
+            <strong>@questionScore</strong>
+            <div class="vote-control" aria-hidden="true">▼</div>
+            @if (Model.IsSolved)
+            {
+                <div class="accepted-mark" title="Solved" aria-label="Solved">✓</div>
+            }
+        </aside>
+
+        <div class="post-body">
+            <div class="post-content">@Model.Content</div>
+
+            <footer class="post-footer">
+                <div class="post-actions">
+                    <a href="#">Share</a>
+                    <a href="#">Improve this question</a>
+                    <a href="#">Follow</a>
+                </div>
+
+                <div class="user-card">
+                    <span>asked @Model.CreatedAt.ToString("MMM d, yyyy")</span>
+                    <strong>@authorName</strong>
+                    <span>@(Model.User?.Reputation ?? 0) reputation</span>
+                </div>
+            </footer>
+        </div>
+    </article>
+
+    <section class="answers-section">
+        <div class="answers-header">
+            <h2>@answerCount @(answerCount == 1 ? "Answer" : "Answers")</h2>
+            <select class="form-select answer-sort" aria-label="Answer sort order">
+                <option>Highest score</option>
+                <option>Newest</option>
+                <option>Oldest</option>
+            </select>
+        </div>
+
+        @if (posts.Count == 0)
+        {
+            <div class="empty-answers">
+                <h3>No answers yet</h3>
+                <p>Be the first to respond with a clear explanation or working solution.</p>
+            </div>
+        }
+        else
+        {
+            foreach (var post in posts)
+            {
+                var answerScore = post.Upvotes - post.Downvotes;
+                var postAuthorName = post.User?.UserName ?? "unknown user";
+                var comments = (post.Comments ?? Array.Empty<Comment>())
+                    .OrderBy(comment => comment.CreatedAt)
+                    .ToList();
+
+                <article class="thread-post answer-post @(post.IsAcceptedAnswer ? "accepted-answer" : "")">
+                    <aside class="vote-column" aria-label="Answer score">
+                        <div class="vote-control" aria-hidden="true">▲</div>
+                        <strong>@answerScore</strong>
+                        <div class="vote-control" aria-hidden="true">▼</div>
+                        @if (post.IsAcceptedAnswer)
+                        {
+                            <div class="accepted-mark" title="Accepted answer" aria-label="Accepted answer">✓</div>
+                        }
+                    </aside>
+
+                    <div class="post-body">
+                        <div class="post-content">@post.Content</div>
+                        
+                        <footer class="post-footer">
+                            <div class="post-actions">
+                                <a href="#">Share</a>
+                                <a href="#">Improve this answer</a>
+                                <a href="#">Follow</a>
+                            </div>
+
+                            <div class="user-card">
+                                <span>answered @post.CreatedAt.ToString("MMM d, yyyy")</span>
+                                <strong>@postAuthorName</strong>
+                                <span>@(post.User?.Reputation ?? 0) reputation</span>
+                            </div>
+                        </footer>
+                        
+                        @if (comments.Count > 0)
+                        {
+                            <div class="comment-list">
+                                @foreach (var comment in comments)
+                                {
+                                    <div class="comment">
+                                        <span>@comment.Content</span>
+                                        <span class="comment-meta">- @(comment.User?.UserName ?? "unknown user") @comment.CreatedAt.ToString("MMM d, yyyy")</span>
+                                    </div>
+                                }
+                            </div>
+                        }
+                    </div>
+                </article>
+            }
+        }
+
+        @if (User.Identity?.IsAuthenticated == true)
+        {
+            <form asp-controller="Thread" asp-action="PostAnswer" asp-route-id="@Model.Id" method="post" class="answer-form">
+                <h3>Your Answer</h3>
+                @if (TempData["AnswerError"] is string answerError)
+                {
+                    <div class="text-danger answer-error">@answerError</div>
+                }
+                <div class="form-floating">
+                    <textarea id="answer-content" name="content" class="form-control" placeholder="Enter your answer here..."></textarea>
+                    <label for="answer-content">Answer</label>
+                </div>
+                <button type="submit" class="btn btn-primary">Post Your Answer</button>
+            </form>
+        }
+    </section>
+</section>
