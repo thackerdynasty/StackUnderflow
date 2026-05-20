@@ -120,19 +120,22 @@
                                 <span>@(post.User?.Reputation ?? 0) reputation</span>
                             </div>
                         </footer>
+                     
+                        <div class="comment-list">
+                            @foreach (var comment in comments)
+                            {
+                                <div class="comment">
+                                    <span>@comment.Content</span>
+                                    <span class="comment-meta">- @(comment.User?.UserName ?? "unknown user") @comment.CreatedAt.ToString("MMM d, yyyy")</span>
+                                </div>
+                            }
+                            <form asp-action="PostComment" asp-route-id="@Model.Id" asp-route-postId="@post.Id" method="post">
+                                <textarea id="comment-content" name="content" class="form-control-sm" placeholder="Your comment..." style="margin-top: 8px;"></textarea>
+                                <br/>
+                                <button type="submit" class="btn btn-secondary btn-sm">Add comment</button>
+                            </form>
+                        </div>
                         
-                        @if (comments.Count > 0)
-                        {
-                            <div class="comment-list">
-                                @foreach (var comment in comments)
-                                {
-                                    <div class="comment">
-                                        <span>@comment.Content</span>
-                                        <span class="comment-meta">- @(comment.User?.UserName ?? "unknown user") @comment.CreatedAt.ToString("MMM d, yyyy")</span>
-                                    </div>
-                                }
-                            </div>
-                        }
                     </div>
                 </article>
             }

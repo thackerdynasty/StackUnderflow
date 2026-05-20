@@ -94,6 +94,33 @@ public class ThreadController : Controller
     [Authorize]
     [HttpPost]
     [ValidateAntiForgeryToken]
+    [Route("/Thread/{id}/Post/{postId}/Comment")]
+    public IActionResult PostComment(int id, int postId, string content)
+    {
+        if (string.IsNullOrWhiteSpace(content))
+        {
+            TempData["CommentError"] = "Comment content is required.";
+            return RedirectToAction(nameof(Detail), new { id });
+        }
+
+        var comment = new Comment
+        {
+            Content = content.Trim(),
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow,
+            PostId = postId,
+            UserId = User.FindFirst(ClaimTypes.NameIdentifier)!.Value
+        };
+        
+        _context.Comments.Add(comment);
+        _context.SaveChanges();
+        
+        return RedirectToAction(nameof(Detail), new { id });
+    }
+
+    [Authorize]
+    [HttpPost]
+    [ValidateAntiForgeryToken]
     [Route("/Thread/{id}/Vote")]
     public IActionResult VoteQuestion(int id, string vote)
     {
