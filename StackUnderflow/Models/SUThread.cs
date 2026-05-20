@@ -23,4 +23,5 @@ public class SUThread
     public User User { get; set; }
     
     public ICollection<Post> Posts { get; set; }
+    public ICollection<ThreadVote> Votes { get; set; }
 }
