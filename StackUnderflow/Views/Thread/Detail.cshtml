@@ -5,6 +5,8 @@
     var questionScore = Model.UpvoteCount - Model.DownvoteCount;
     var answerCount = Model.Posts?.Count ?? 0;
     var authorName = Model.User?.UserName ?? "unknown user";
+    var questionVote = ViewBag.QuestionVote is int currentQuestionVote ? currentQuestionVote : 0;
+    var answerVotes = ViewBag.AnswerVotes as IDictionary<int, int> ?? new Dictionary<int, int>();
     var posts = (Model.Posts ?? Array.Empty<Post>())
         .OrderByDescending(post => post.IsAcceptedAnswer)
         .ThenByDescending(post => post.Upvotes - post.Downvotes)
@@ -27,9 +29,13 @@
 
     <article class="thread-post">
         <aside class="vote-column" aria-label="Question score">
-            <div class="vote-control" aria-hidden="true">▲</div>
+            <form asp-controller="Thread" asp-action="VoteQuestion" asp-route-id="@Model.Id" method="post" class="vote-form">
+                <button type="submit" name="vote" value="up" class="vote-control @(questionVote == 1 ? "is-selected" : "")" aria-label="Upvote question">▲</button>
+            </form>
             <strong>@questionScore</strong>
-            <div class="vote-control" aria-hidden="true">▼</div>
+            <form asp-controller="Thread" asp-action="VoteQuestion" asp-route-id="@Model.Id" method="post" class="vote-form">
+                <button type="submit" name="vote" value="down" class="vote-control @(questionVote == -1 ? "is-selected" : "")" aria-label="Downvote question">▼</button>
+            </form>
             @if (Model.IsSolved)
             {
                 <div class="accepted-mark" title="Solved" aria-label="Solved">✓</div>
@@ -78,15 +84,20 @@
             {
                 var answerScore = post.Upvotes - post.Downvotes;
                 var postAuthorName = post.User?.UserName ?? "unknown user";
+                var answerVote = answerVotes.TryGetValue(post.Id, out var currentAnswerVote) ? currentAnswerVote : 0;
                 var comments = (post.Comments ?? Array.Empty<Comment>())
                     .OrderBy(comment => comment.CreatedAt)
                     .ToList();
 
                 <article class="thread-post answer-post @(post.IsAcceptedAnswer ? "accepted-answer" : "")">
                     <aside class="vote-column" aria-label="Answer score">
-                        <div class="vote-control" aria-hidden="true">▲</div>
+                        <form asp-controller="Thread" asp-action="VoteAnswer" asp-route-threadId="@Model.Id" asp-route-postId="@post.Id" method="post" class="vote-form">
+                            <button type="submit" name="vote" value="up" class="vote-control @(answerVote == 1 ? "is-selected" : "")" aria-label="Upvote answer">▲</button>
+                        </form>
                         <strong>@answerScore</strong>
-                        <div class="vote-control" aria-hidden="true">▼</div>
+                        <form asp-controller="Thread" asp-action="VoteAnswer" asp-route-threadId="@Model.Id" asp-route-postId="@post.Id" method="post" class="vote-form">
+                            <button type="submit" name="vote" value="down" class="vote-control @(answerVote == -1 ? "is-selected" : "")" aria-label="Downvote answer">▼</button>
+                        </form>
                         @if (post.IsAcceptedAnswer)
                         {
                             <div class="accepted-mark" title="Accepted answer" aria-label="Accepted answer">✓</div>

@@ -27,4 +27,5 @@ public class Post
     public SUThread SUThread { get; set; }
     
     public ICollection<Comment> Comments { get; set; }
+    public ICollection<PostVote> Votes { get; set; }
 }
