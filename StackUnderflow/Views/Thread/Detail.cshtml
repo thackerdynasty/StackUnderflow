@@ -7,11 +7,20 @@
     var authorName = Model.User?.UserName ?? "unknown user";
     var questionVote = ViewBag.QuestionVote is int currentQuestionVote ? currentQuestionVote : 0;
     var answerVotes = ViewBag.AnswerVotes as IDictionary<int, int> ?? new Dictionary<int, int>();
-    var posts = (Model.Posts ?? Array.Empty<Post>())
-        .OrderByDescending(post => post.IsAcceptedAnswer)
-        .ThenByDescending(post => post.Upvotes - post.Downvotes)
-        .ThenBy(post => post.CreatedAt)
-        .ToList();
+    var selectedSort = Context.Request.Query["sort"].ToString();
+
+    var postsQuery = (Model.Posts ?? Array.Empty<Post>())
+        .OrderByDescending(post => post.IsAcceptedAnswer);
+
+    var posts = selectedSort switch
+    {
+        "newest" => postsQuery.ThenByDescending(post => post.CreatedAt).ToList(),
+        "oldest" => postsQuery.ThenBy(post => post.CreatedAt).ToList(),
+        _ => postsQuery
+            .ThenByDescending(post => post.Upvotes - post.Downvotes)
+            .ThenBy(post => post.CreatedAt)
+            .ToList()
+    };
 }
 
 <section class="thread-detail">
@@ -64,11 +73,13 @@
     <section class="answers-section">
         <div class="answers-header">
             <h2>@answerCount @(answerCount == 1 ? "Answer" : "Answers")</h2>
-            <select class="form-select answer-sort" aria-label="Answer sort order">
-                <option>Highest score</option>
-                <option>Newest</option>
-                <option>Oldest</option>
-            </select>
+            <form method="get">
+                <select name="sort" class="form-select answer-sort" aria-label="Answer sort order" onchange="this.form.submit()">
+                    <option value="score" selected="@(selectedSort != "newest" && selectedSort != "oldest")">Highest score</option>
+                    <option value="newest" selected="@(selectedSort == "newest")">Newest</option>
+                    <option value="oldest" selected="@(selectedSort == "oldest")">Oldest</option>
+                </select>
+            </form>
         </div>
 
         @if (posts.Count == 0)
@@ -135,7 +146,6 @@
                                 <button type="submit" class="btn btn-secondary btn-sm">Add comment</button>
                             </form>
                         </div>
-                        
                     </div>
                 </article>
             }
