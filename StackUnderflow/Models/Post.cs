@@ -1,7 +1,4 @@
 using System.ComponentModel.DataAnnotations;
-using System.ComponentModel.DataAnnotations.Schema;
-using Microsoft.AspNetCore.Identity;
-using Microsoft.EntityFrameworkCore;
 
 namespace StackUnderflow.Models;
 
@@ -27,4 +24,5 @@ public class Post
     public SUThread SUThread { get; set; }
     
     public ICollection<Comment> Comments { get; set; }
+    public ICollection<PostVote> Votes { get; set; }
 }

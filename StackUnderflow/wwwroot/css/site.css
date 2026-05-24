@@ -272,13 +272,32 @@ body {
   line-height: 1.2;
 }
 
+.vote-form {
+  margin: 0;
+}
+
 .vote-control {
+  border: 0;
+  padding: 0;
+  background: transparent;
   width: 34px;
   height: 30px;
   color: #9fa6ad;
   font-size: 1.25rem;
   line-height: 30px;
   text-align: center;
+  cursor: pointer;
+}
+
+.vote-control:hover,
+.vote-control:focus-visible,
+.vote-control.is-selected {
+  color: #f48225;
+}
+
+.vote-control:focus-visible {
+  outline: 2px solid #f48225;
+  outline-offset: 2px;
 }
 
 .accepted-mark {

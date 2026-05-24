@@ -5,11 +5,22 @@
     var questionScore = Model.UpvoteCount - Model.DownvoteCount;
     var answerCount = Model.Posts?.Count ?? 0;
     var authorName = Model.User?.UserName ?? "unknown user";
-    var posts = (Model.Posts ?? Array.Empty<Post>())
-        .OrderByDescending(post => post.IsAcceptedAnswer)
-        .ThenByDescending(post => post.Upvotes - post.Downvotes)
-        .ThenBy(post => post.CreatedAt)
-        .ToList();
+    var questionVote = ViewBag.QuestionVote is int currentQuestionVote ? currentQuestionVote : 0;
+    var answerVotes = ViewBag.AnswerVotes as IDictionary<int, int> ?? new Dictionary<int, int>();
+    var selectedSort = Context.Request.Query["sort"].ToString();
+
+    var postsQuery = (Model.Posts ?? Array.Empty<Post>())
+        .OrderByDescending(post => post.IsAcceptedAnswer);
+
+    var posts = selectedSort switch
+    {
+        "newest" => postsQuery.ThenByDescending(post => post.CreatedAt).ToList(),
+        "oldest" => postsQuery.ThenBy(post => post.CreatedAt).ToList(),
+        _ => postsQuery
+            .ThenByDescending(post => post.Upvotes - post.Downvotes)
+            .ThenBy(post => post.CreatedAt)
+            .ToList()
+    };
 }
 
 <section class="thread-detail">
@@ -27,9 +38,13 @@
 
     <article class="thread-post">
         <aside class="vote-column" aria-label="Question score">
-            <div class="vote-control" aria-hidden="true">▲</div>
+            <form asp-controller="Thread" asp-action="VoteQuestion" asp-route-id="@Model.Id" method="post" class="vote-form">
+                <button type="submit" name="vote" value="up" class="vote-control @(questionVote == 1 ? "is-selected" : "")" aria-label="Upvote question">▲</button>
+            </form>
             <strong>@questionScore</strong>
-            <div class="vote-control" aria-hidden="true">▼</div>
+            <form asp-controller="Thread" asp-action="VoteQuestion" asp-route-id="@Model.Id" method="post" class="vote-form">
+                <button type="submit" name="vote" value="down" class="vote-control @(questionVote == -1 ? "is-selected" : "")" aria-label="Downvote question">▼</button>
+            </form>
             @if (Model.IsSolved)
             {
                 <div class="accepted-mark" title="Solved" aria-label="Solved">✓</div>
@@ -58,11 +73,13 @@
     <section class="answers-section">
         <div class="answers-header">
             <h2>@answerCount @(answerCount == 1 ? "Answer" : "Answers")</h2>
-            <select class="form-select answer-sort" aria-label="Answer sort order">
-                <option>Highest score</option>
-                <option>Newest</option>
-                <option>Oldest</option>
-            </select>
+            <form method="get">
+                <select name="sort" class="form-select answer-sort" aria-label="Answer sort order" onchange="this.form.submit()">
+                    <option value="score" selected="@(selectedSort != "newest" && selectedSort != "oldest")">Highest score</option>
+                    <option value="newest" selected="@(selectedSort == "newest")">Newest</option>
+                    <option value="oldest" selected="@(selectedSort == "oldest")">Oldest</option>
+                </select>
+            </form>
         </div>
 
         @if (posts.Count == 0)
@@ -78,15 +95,20 @@
             {
                 var answerScore = post.Upvotes - post.Downvotes;
                 var postAuthorName = post.User?.UserName ?? "unknown user";
+                var answerVote = answerVotes.TryGetValue(post.Id, out var currentAnswerVote) ? currentAnswerVote : 0;
                 var comments = (post.Comments ?? Array.Empty<Comment>())
                     .OrderBy(comment => comment.CreatedAt)
                     .ToList();
 
                 <article class="thread-post answer-post @(post.IsAcceptedAnswer ? "accepted-answer" : "")">
                     <aside class="vote-column" aria-label="Answer score">
-                        <div class="vote-control" aria-hidden="true">▲</div>
+                        <form asp-controller="Thread" asp-action="VoteAnswer" asp-route-threadId="@Model.Id" asp-route-postId="@post.Id" method="post" class="vote-form">
+                            <button type="submit" name="vote" value="up" class="vote-control @(answerVote == 1 ? "is-selected" : "")" aria-label="Upvote answer">▲</button>
+                        </form>
                         <strong>@answerScore</strong>
-                        <div class="vote-control" aria-hidden="true">▼</div>
+                        <form asp-controller="Thread" asp-action="VoteAnswer" asp-route-threadId="@Model.Id" asp-route-postId="@post.Id" method="post" class="vote-form">
+                            <button type="submit" name="vote" value="down" class="vote-control @(answerVote == -1 ? "is-selected" : "")" aria-label="Downvote answer">▼</button>
+                        </form>
                         @if (post.IsAcceptedAnswer)
                         {
                             <div class="accepted-mark" title="Accepted answer" aria-label="Accepted answer">✓</div>
@@ -109,19 +131,21 @@
                                 <span>@(post.User?.Reputation ?? 0) reputation</span>
                             </div>
                         </footer>
-                        
-                        @if (comments.Count > 0)
-                        {
-                            <div class="comment-list">
-                                @foreach (var comment in comments)
-                                {
-                                    <div class="comment">
-                                        <span>@comment.Content</span>
-                                        <span class="comment-meta">- @(comment.User?.UserName ?? "unknown user") @comment.CreatedAt.ToString("MMM d, yyyy")</span>
-                                    </div>
-                                }
-                            </div>
-                        }
+                     
+                        <div class="comment-list">
+                            @foreach (var comment in comments)
+                            {
+                                <div class="comment">
+                                    <span>@comment.Content</span>
+                                    <span class="comment-meta">- @(comment.User?.UserName ?? "unknown user") @comment.CreatedAt.ToString("MMM d, yyyy")</span>
+                                </div>
+                            }
+                            <form asp-action="PostComment" asp-route-id="@Model.Id" asp-route-postId="@post.Id" method="post">
+                                <textarea id="comment-content" name="content" class="form-control-sm" placeholder="Your comment..." style="margin-top: 8px;"></textarea>
+                                <br/>
+                                <button type="submit" class="btn btn-secondary btn-sm">Add comment</button>
+                            </form>
+                        </div>
                     </div>
                 </article>
             }
