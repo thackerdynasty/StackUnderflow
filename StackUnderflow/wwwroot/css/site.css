@@ -29,3 +29,28 @@ body {
 .form-floating > .form-control-plaintext:focus::placeholder, .form-floating > .form-control:focus::placeholder {
   text-align: start;
 }
+/* Profile page avatar */
+.profile-avatar {
+  width: 84px;
+  height: 84px;
+  flex: 0 0 84px;
+}
+
+.profile-avatar img,
+.profile-avatar-initials {
+  width: 84px;
+  height: 84px;
+  border-radius: 12px;
+  object-fit: cover;
+}
+
+.profile-avatar-initials {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #0d6efd;
+  color: #fff;
+  font-size: 2.25rem;
+  font-weight: 600;
+  line-height: 1;
+}
