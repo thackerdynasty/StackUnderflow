@@ -2,19 +2,19 @@ using System.ComponentModel.DataAnnotations;
 
 namespace StackUnderflow.Models;
 
-public class Comment
+public class ThreadVote
 {
     [Key]
     public int Id { get; set; }
-    
-    public string Content { get; set; }
-    
+
+    public int Value { get; set; }
+
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
-    
+
     public string UserId { get; set; }
     public User User { get; set; }
-    
-    public int PostId { get; set; }
-    public Post Post { get; set; }
+
+    public int SUThreadId { get; set; }
+    public SUThread SUThread { get; set; }
 }
