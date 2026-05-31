@@ -137,7 +137,7 @@
                         
                         @if (isThreadOwner && !post.IsAcceptedAnswer && !Model.IsSolved)
                         {
-                            <form asp-controller="Thread" asp-action="AcceptAnswer" asp-route-threadId="@Model.Id" asp-route-postId="@post.Id" method="post">
+                            <form asp-controller="Thread" asp-action="AcceptAnswer" asp-route-id="@Model.Id" asp-route-postId="@post.Id" method="post">
                                 <button type="submit" 
                                         class="btn btn-primary" 
                                         style="background-color: green; outline-color: green; border-color: green;"
