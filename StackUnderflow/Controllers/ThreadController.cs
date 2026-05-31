@@ -253,4 +253,19 @@ public class ThreadController : Controller
         else
             post.Downvotes = Math.Max(0, post.Downvotes - 1);
     }
+
+    [Authorize]
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    [Route("/Thread/{threadId}/Accept/{postId}")]
+    public IActionResult AcceptAnswer(int id, int postId)
+    {
+        var thread = _context.SUThreads.Find(id);
+        var post =  _context.Posts.Find(postId);
+        if (thread == null || post == null) return NotFound();
+        thread.IsSolved = true;
+        post.IsAcceptedAnswer = true;
+        _context.SaveChanges();
+        return RedirectToAction(nameof(Detail), new { id });
+    }
 }
