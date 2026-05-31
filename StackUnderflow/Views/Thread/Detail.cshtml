@@ -1,3 +1,4 @@
+@using System.Security.Claims
 @model SUThread
 
 @{
@@ -21,6 +22,8 @@
             .ThenBy(post => post.CreatedAt)
             .ToList()
     };
+    
+    bool isThreadOwner = User.Identity?.IsAuthenticated == true && Model.UserId == User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
 }
 
 <section class="thread-detail">
@@ -131,6 +134,17 @@
                                 <span>@(post.User?.Reputation ?? 0) reputation</span>
                             </div>
                         </footer>
+                        
+                        @if (isThreadOwner && !post.IsAcceptedAnswer && !Model.IsSolved)
+                        {
+                            <form asp-controller="Thread" asp-action="AcceptAnswer" asp-route-threadId="@Model.Id" asp-route-postId="@post.Id" method="post">
+                                <button type="submit" 
+                                        class="btn btn-primary" 
+                                        style="background-color: green; outline-color: green; border-color: green;"
+                                        title="Mark as accepted answer" 
+                                        aria-label="Mark as accepted answer">Accept Answer</button>
+                            </form>
+                        }
                      
                         <div class="comment-list">
                             @foreach (var comment in comments)
