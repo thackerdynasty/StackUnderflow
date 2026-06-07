@@ -37,6 +37,8 @@ public class ThreadController : Controller
         if (thread == null)
             return NotFound();
 
+        thread.ViewCount++;
+
         if (User.Identity?.IsAuthenticated == true)
         {
             var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
@@ -52,6 +54,8 @@ public class ThreadController : Controller
                     .ToDictionary(v => v.PostId, v => v.Value);
             }
         }
+        
+        _context.SaveChanges();
         
         return View(thread);
     }
