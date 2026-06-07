@@ -9,6 +9,7 @@
     var questionVote = ViewBag.QuestionVote is int currentQuestionVote ? currentQuestionVote : 0;
     var answerVotes = ViewBag.AnswerVotes as IDictionary<int, int> ?? new Dictionary<int, int>();
     var selectedSort = Context.Request.Query["sort"].ToString();
+    var currentUserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
 
     var postsQuery = (Model.Posts ?? Array.Empty<Post>())
         .OrderByDescending(post => post.IsAcceptedAnswer);
@@ -23,7 +24,7 @@
             .ToList()
     };
     
-    bool isThreadOwner = User.Identity?.IsAuthenticated == true && Model.UserId == User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+    bool isThreadOwner = User.Identity?.IsAuthenticated == true && Model.UserId == currentUserId;
 }
 
 <section class="thread-detail">
@@ -42,11 +43,25 @@
     <article class="thread-post">
         <aside class="vote-column" aria-label="Question score">
             <form asp-controller="Thread" asp-action="VoteQuestion" asp-route-id="@Model.Id" method="post" class="vote-form">
-                <button type="submit" name="vote" value="up" class="vote-control @(questionVote == 1 ? "is-selected" : "")" aria-label="Upvote question">▲</button>
+                @if (isThreadOwner)
+                {
+                    <button type="submit" name="vote" value="up" class="vote-control @(questionVote == 1 ? "is-selected" : "")" aria-label="Upvote question" disabled>▲</button>
+                }
+                else
+                {
+                    <button type="submit" name="vote" value="up" class="vote-control @(questionVote == 1 ? "is-selected" : "")" aria-label="Upvote question">▲</button>
+                }
             </form>
             <strong>@questionScore</strong>
             <form asp-controller="Thread" asp-action="VoteQuestion" asp-route-id="@Model.Id" method="post" class="vote-form">
-                <button type="submit" name="vote" value="down" class="vote-control @(questionVote == -1 ? "is-selected" : "")" aria-label="Downvote question">▼</button>
+                @if (isThreadOwner)
+                {
+                    <button type="submit" name="vote" value="down" class="vote-control @(questionVote == -1 ? "is-selected" : "")" aria-label="Downvote question" disabled>▼</button>
+                }
+                else
+                {
+                    <button type="submit" name="vote" value="down" class="vote-control @(questionVote == -1 ? "is-selected" : "")" aria-label="Downvote question">▼</button>
+                }
             </form>
             @if (Model.IsSolved)
             {
@@ -98,6 +113,7 @@
             {
                 var answerScore = post.Upvotes - post.Downvotes;
                 var postAuthorName = post.User?.UserName ?? "unknown user";
+                var isAnswerOwner = User.Identity?.IsAuthenticated == true && post.UserId == currentUserId;
                 var answerVote = answerVotes.TryGetValue(post.Id, out var currentAnswerVote) ? currentAnswerVote : 0;
                 var comments = (post.Comments ?? Array.Empty<Comment>())
                     .OrderBy(comment => comment.CreatedAt)
@@ -106,11 +122,25 @@
                 <article id="answer-@post.Id" class="thread-post answer-post @(post.IsAcceptedAnswer ? "accepted-answer" : "")" style="scroll-margin-top: 1rem;">
                     <aside class="vote-column" aria-label="Answer score">
                         <form asp-controller="Thread" asp-action="VoteAnswer" asp-route-threadId="@Model.Id" asp-route-postId="@post.Id" method="post" class="vote-form">
-                            <button type="submit" name="vote" value="up" class="vote-control @(answerVote == 1 ? "is-selected" : "")" aria-label="Upvote answer">▲</button>
+                            @if (isAnswerOwner)
+                            {
+                                <button type="submit" name="vote" value="up" class="vote-control @(answerVote == 1 ? "is-selected" : "")" aria-label="Upvote answer" disabled>▲</button>
+                            }
+                            else
+                            {
+                                <button type="submit" name="vote" value="up" class="vote-control @(answerVote == 1 ? "is-selected" : "")" aria-label="Upvote answer">▲</button>
+                            }
                         </form>
                         <strong>@answerScore</strong>
                         <form asp-controller="Thread" asp-action="VoteAnswer" asp-route-threadId="@Model.Id" asp-route-postId="@post.Id" method="post" class="vote-form">
-                            <button type="submit" name="vote" value="down" class="vote-control @(answerVote == -1 ? "is-selected" : "")" aria-label="Downvote answer">▼</button>
+                            @if (isAnswerOwner)
+                            {
+                                <button type="submit" name="vote" value="down" class="vote-control @(answerVote == -1 ? "is-selected" : "")" aria-label="Downvote answer" disabled>▼</button>
+                            }
+                            else
+                            {
+                                <button type="submit" name="vote" value="down" class="vote-control @(answerVote == -1 ? "is-selected" : "")" aria-label="Downvote answer">▼</button>
+                            }
                         </form>
                         @if (post.IsAcceptedAnswer)
                         {
