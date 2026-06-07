@@ -315,6 +315,34 @@ namespace StackUnderflow.Migrations
                     b.ToTable("SUThreads");
                 });
 
+            modelBuilder.Entity("StackUnderflow.Models.SavedThread", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("SUThreadId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("SavedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SUThreadId");
+
+                    b.HasIndex("UserId", "SUThreadId")
+                        .IsUnique();
+
+                    b.ToTable("SavedThreads");
+                });
+
             modelBuilder.Entity("StackUnderflow.Models.ThreadVote", b =>
                 {
                     b.Property<int>("Id")
@@ -547,6 +575,25 @@ namespace StackUnderflow.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("StackUnderflow.Models.SavedThread", b =>
+                {
+                    b.HasOne("StackUnderflow.Models.SUThread", "SUThread")
+                        .WithMany("SavedBy")
+                        .HasForeignKey("SUThreadId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.HasOne("StackUnderflow.Models.User", "User")
+                        .WithMany("SavedThreads")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.Navigation("SUThread");
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("StackUnderflow.Models.ThreadVote", b =>
                 {
                     b.HasOne("StackUnderflow.Models.SUThread", "SUThread")
@@ -577,6 +624,8 @@ namespace StackUnderflow.Migrations
                 {
                     b.Navigation("Posts");
 
+                    b.Navigation("SavedBy");
+
                     b.Navigation("Votes");
                 });
 
@@ -589,6 +638,8 @@ namespace StackUnderflow.Migrations
                     b.Navigation("Posts");
 
                     b.Navigation("SUThreads");
+
+                    b.Navigation("SavedThreads");
 
                     b.Navigation("ThreadVotes");
                 });
