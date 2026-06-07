@@ -7,6 +7,9 @@ public class ProfileViewModel
 {
     public required User User { get; set; }
 
+    /// <summary>True when the signed-in user is viewing their own profile (enables bio editing, etc.).</summary>
+    public bool IsOwnProfile { get; set; }
+
     // Headline stats
     public int Reputation => User.Reputation;
     public DateTime JoinDate => User.JoinDate;

@@ -1,6 +1,6 @@
 @model ProfileViewModel
 @{
-    ViewData["Title"] = "My Profile";
+    ViewData["Title"] = Model.IsOwnProfile ? "My Profile" : $"{Model.DisplayName}'s Profile";
 }
 
 @if (TempData["ProfileStatus"] is string status)
@@ -32,7 +32,10 @@
             Member since @Model.JoinDate.ToString("MMMM d, yyyy")
         </div>
     </div>
-    <a class="btn btn-outline-secondary ms-sm-auto" asp-area="Identity" asp-page="/Account/Manage/Index">View account settings</a>
+    @if (Model.IsOwnProfile)
+    {
+        <a class="btn btn-outline-secondary ms-sm-auto" asp-area="Identity" asp-page="/Account/Manage/Index">View account settings</a>
+    }
 </div>
 
 <div class="row g-3 mb-4">
@@ -74,31 +77,41 @@
 <div class="card mb-4">
     <div class="card-header d-flex justify-content-between align-items-center">
         <span class="fw-semibold">About me</span>
-        <button class="btn btn-sm btn-outline-secondary" type="button"
-                data-bs-toggle="collapse" data-bs-target="#bioEditor" aria-expanded="false">
-            Edit bio
-        </button>
+        @if (Model.IsOwnProfile)
+        {
+            <button class="btn btn-sm btn-outline-secondary" type="button"
+                    data-bs-toggle="collapse" data-bs-target="#bioEditor" aria-expanded="false">
+                Edit bio
+            </button>
+        }
     </div>
     <div class="card-body">
         @if (string.IsNullOrWhiteSpace(Model.Bio))
         {
-            <p class="text-muted fst-italic mb-0">You haven't written a bio yet. Tell other users about yourself!</p>
+            <p class="text-muted fst-italic mb-0">
+                @(Model.IsOwnProfile
+                    ? "You haven't written a bio yet. Tell other users about yourself!"
+                    : "This user hasn't written a bio yet.")
+            </p>
         }
         else
         {
             <p class="mb-0" style="white-space: pre-wrap;">@Model.Bio</p>
         }
 
-        <div class="collapse mt-3" id="bioEditor">
-            <form asp-action="UpdateBio" method="post">
-                <div class="mb-2">
-                    <textarea name="bio" class="form-control" rows="4" maxlength="500"
-                              placeholder="Share a short bio with the community...">@Model.Bio</textarea>
-                    <div class="form-text">Up to 500 characters. Visible to other users.</div>
-                </div>
-                <button type="submit" class="btn btn-primary btn-sm">Save bio</button>
-            </form>
-        </div>
+        @if (Model.IsOwnProfile)
+        {
+            <div class="collapse mt-3" id="bioEditor">
+                <form asp-action="UpdateBio" method="post">
+                    <div class="mb-2">
+                        <textarea name="bio" class="form-control" rows="4" maxlength="500"
+                                  placeholder="Share a short bio with the community...">@Model.Bio</textarea>
+                        <div class="form-text">Up to 500 characters. Visible to other users.</div>
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-sm">Save bio</button>
+                </form>
+            </div>
+        }
     </div>
 </div>
 
@@ -114,9 +127,10 @@
             <ul class="list-group">
                 @foreach (var q in Model.Questions)
                 {
-                    <li class="list-group-item d-flex justify-content-between align-items-start">
+                    <li class="list-group-item list-group-item-action d-flex justify-content-between align-items-start position-relative">
                         <div class="me-2">
-                            <div class="fw-semibold">@q.Title</div>
+                            <a asp-controller="Thread" asp-action="Detail" asp-route-id="@q.Id"
+                               class="fw-semibold stretched-link text-decoration-none">@q.Title</a>
                             <div class="small text-muted">Asked @q.CreatedAt.ToString("MMM d, yyyy")</div>
                         </div>
                         <div class="text-end text-nowrap">
@@ -143,9 +157,10 @@
             <ul class="list-group">
                 @foreach (var a in Model.Answers)
                 {
-                    <li class="list-group-item d-flex justify-content-between align-items-start">
+                    <li class="list-group-item list-group-item-action d-flex justify-content-between align-items-start position-relative">
                         <div class="me-2">
-                            <div class="fw-semibold">@(a.SUThread?.Title ?? "(thread)")</div>
+                            <a asp-controller="Thread" asp-action="Detail" asp-route-id="@a.SUThreadId" asp-fragment="answer-@a.Id"
+                               class="fw-semibold stretched-link text-decoration-none">@(a.SUThread?.Title ?? "(thread)")</a>
                             <div class="small text-muted">Answered @a.CreatedAt.ToString("MMM d, yyyy")</div>
                         </div>
                         <div class="text-end text-nowrap">
@@ -173,8 +188,9 @@
         <ul class="list-group">
             @foreach (var c in Model.Comments)
             {
-                <li class="list-group-item">
-                    <div>@c.Content</div>
+                <li class="list-group-item list-group-item-action position-relative">
+                    <a asp-controller="Thread" asp-action="Detail" asp-route-id="@c.Post?.SUThreadId" asp-fragment="comment-@c.Id"
+                       class="stretched-link text-decoration-none text-body">@c.Content</a>
                     <div class="small text-muted">
                         on &ldquo;@(c.Post?.SUThread?.Title ?? "a post")&rdquo;
                         &bull; @c.CreatedAt.ToString("MMM d, yyyy")
