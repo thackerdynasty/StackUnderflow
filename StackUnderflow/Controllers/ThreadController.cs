@@ -37,8 +37,6 @@ public class ThreadController : Controller
         if (thread == null)
             return NotFound();
 
-        thread.ViewCount++;
-
         if (User.Identity?.IsAuthenticated == true)
         {
             var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
@@ -53,6 +51,15 @@ public class ThreadController : Controller
                     .Where(v => v.UserId == userId && v.Post.SUThreadId == id)
                     .ToDictionary(v => v.PostId, v => v.Value);
             }
+
+            if (userId != thread.UserId)
+            {
+                thread.ViewCount++;
+            }
+        }
+        else
+        {
+            thread.ViewCount++;
         }
         
         _context.SaveChanges();
@@ -132,7 +139,9 @@ public class ThreadController : Controller
         if (voteValue == null)
             return BadRequest();
 
-        var thread = _context.SUThreads.FirstOrDefault(t => t.Id == id);
+        var thread = _context.SUThreads
+            .Include(t => t.User)
+            .FirstOrDefault(t => t.Id == id);
         if (thread == null)
             return NotFound();
 
@@ -229,17 +238,31 @@ public class ThreadController : Controller
     private static void ApplyThreadVote(SUThread thread, int voteValue)
     {
         if (voteValue > 0)
+        {
             thread.UpvoteCount++;
+            User user = thread.User;
+            user.Reputation += 10;
+        }
         else
+        {
             thread.DownvoteCount++;
+            User user = thread.User;
+            user.Reputation -= 2;
+        }
     }
 
     private static void RevertThreadVote(SUThread thread, int voteValue)
     {
         if (voteValue > 0)
+        {
             thread.UpvoteCount = Math.Max(0, thread.UpvoteCount - 1);
+            thread.User.Reputation -= 10;
+        }
         else
+        {
             thread.DownvoteCount = Math.Max(0, thread.DownvoteCount - 1);
+            thread.User.Reputation += 2;
+        }
     }
 
     private static void ApplyPostVote(Post post, int voteValue)
@@ -263,11 +286,17 @@ public class ThreadController : Controller
     [ValidateAntiForgeryToken]
     public IActionResult AcceptAnswer(int id, int postId)
     {
-        var thread = _context.SUThreads.Find(id);
-        var post =  _context.Posts.Find(postId);
+        var thread = _context.SUThreads
+            .Include(t => t.User)
+            .FirstOrDefault(t => t.Id == id);
+        var post =  _context.Posts
+            .Include(p => p.User)
+            .FirstOrDefault(p => p.Id == postId);
         if (thread == null || post == null) return NotFound();
         thread.IsSolved = true;
         post.IsAcceptedAnswer = true;
+        post.User.Reputation += 15;
+        thread.User.Reputation += 2;
         _context.SaveChanges();
         return RedirectToAction(nameof(Detail), new { id });
     }
