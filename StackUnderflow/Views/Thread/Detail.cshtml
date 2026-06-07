@@ -66,7 +66,7 @@
 
                 <div class="user-card">
                     <span>asked @Model.CreatedAt.ToString("MMM d, yyyy")</span>
-                    <strong>@authorName</strong>
+                    <a asp-controller="Profile" asp-action="Details" asp-route-id="@Model.UserId"><strong>@authorName</strong></a>
                     <span>@(Model.User?.Reputation ?? 0) reputation</span>
                 </div>
             </footer>
@@ -103,7 +103,7 @@
                     .OrderBy(comment => comment.CreatedAt)
                     .ToList();
 
-                <article class="thread-post answer-post @(post.IsAcceptedAnswer ? "accepted-answer" : "")">
+                <article id="answer-@post.Id" class="thread-post answer-post @(post.IsAcceptedAnswer ? "accepted-answer" : "")" style="scroll-margin-top: 1rem;">
                     <aside class="vote-column" aria-label="Answer score">
                         <form asp-controller="Thread" asp-action="VoteAnswer" asp-route-threadId="@Model.Id" asp-route-postId="@post.Id" method="post" class="vote-form">
                             <button type="submit" name="vote" value="up" class="vote-control @(answerVote == 1 ? "is-selected" : "")" aria-label="Upvote answer">▲</button>
@@ -130,7 +130,7 @@
 
                             <div class="user-card">
                                 <span>answered @post.CreatedAt.ToString("MMM d, yyyy")</span>
-                                <strong>@postAuthorName</strong>
+                                <a asp-controller="Profile" asp-action="Details" asp-route-id="@post.UserId"><strong>@postAuthorName</strong></a>
                                 <span>@(post.User?.Reputation ?? 0) reputation</span>
                             </div>
                         </footer>
@@ -149,9 +149,9 @@
                         <div class="comment-list">
                             @foreach (var comment in comments)
                             {
-                                <div class="comment">
+                                <div id="comment-@comment.Id" class="comment" style="scroll-margin-top: 1rem;">
                                     <span>@comment.Content</span>
-                                    <span class="comment-meta">- @(comment.User?.UserName ?? "unknown user") @comment.CreatedAt.ToString("MMM d, yyyy")</span>
+                                    <span class="comment-meta">- <a asp-controller="Profile" asp-action="Details" asp-route-id="@comment.UserId">@(comment.User?.UserName ?? "unknown user")</a> @comment.CreatedAt.ToString("MMM d, yyyy")</span>
                                 </div>
                             }
                             <form asp-action="PostComment" asp-route-id="@Model.Id" asp-route-postId="@post.Id" method="post">

@@ -30,6 +30,37 @@ public class ProfileController : Controller
             return Challenge();
         }
 
+        var model = await BuildProfileAsync(user, isOwnProfile: true);
+        return View(model);
+    }
+
+    // GET: /Profile/Details/{id} — public profile for any user, linked from usernames on threads.
+    [AllowAnonymous]
+    public async Task<IActionResult> Details(string? id)
+    {
+        if (string.IsNullOrEmpty(id))
+        {
+            return NotFound();
+        }
+
+        var user = await _userManager.FindByIdAsync(id);
+        if (user is null)
+        {
+            return NotFound();
+        }
+
+        // If the viewer is looking at their own profile, send them to the editable Index view.
+        if (User.Identity?.IsAuthenticated == true && id == _userManager.GetUserId(User))
+        {
+            return RedirectToAction(nameof(Index));
+        }
+
+        var model = await BuildProfileAsync(user, isOwnProfile: false);
+        return View(nameof(Index), model);
+    }
+
+    private async Task<ProfileViewModel> BuildProfileAsync(User user, bool isOwnProfile)
+    {
         var questions = await _dbContext.SUThreads
             .AsNoTracking()
             .Where(t => t.UserId == user.Id)
@@ -51,9 +82,10 @@ public class ProfileController : Controller
             .OrderByDescending(c => c.CreatedAt)
             .ToListAsync();
 
-        var model = new ProfileViewModel
+        return new ProfileViewModel
         {
             User = user,
+            IsOwnProfile = isOwnProfile,
             Questions = questions,
             Answers = answers,
             Comments = comments,
@@ -62,8 +94,6 @@ public class ProfileController : Controller
             AcceptedAnswerCount = answers.Count(p => p.IsAcceptedAnswer),
             CommentCount = comments.Count,
         };
-
-        return View(model);
     }
 
     // POST: /Profile/UpdateBio
