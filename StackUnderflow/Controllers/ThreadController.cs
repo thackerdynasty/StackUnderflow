@@ -257,7 +257,6 @@ public class ThreadController : Controller
     [Authorize]
     [HttpPost]
     [ValidateAntiForgeryToken]
-    [Route("/Thread/{threadId}/Accept/{postId}")]
     public IActionResult AcceptAnswer(int id, int postId)
     {
         var thread = _context.SUThreads.Find(id);
