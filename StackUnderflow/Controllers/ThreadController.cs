@@ -188,7 +188,9 @@ public class ThreadController : Controller
         if (voteValue == null)
             return BadRequest();
 
-        var post = _context.Posts.FirstOrDefault(p => p.Id == postId && p.SUThreadId == threadId);
+        var post = _context.Posts
+            .Include(p => p.User)
+            .FirstOrDefault(p => p.Id == postId && p.SUThreadId == threadId);
         if (post == null)
             return NotFound();
 
@@ -268,17 +270,29 @@ public class ThreadController : Controller
     private static void ApplyPostVote(Post post, int voteValue)
     {
         if (voteValue > 0)
+        {
             post.Upvotes++;
+            post.User.Reputation += 10;
+        }
         else
+        {
             post.Downvotes++;
+            post.User.Reputation -= 2;
+        }
     }
 
     private static void RevertPostVote(Post post, int voteValue)
     {
         if (voteValue > 0)
+        {
             post.Upvotes = Math.Max(0, post.Upvotes - 1);
+            post.User.Reputation -= 10;
+        }
         else
+        {
             post.Downvotes = Math.Max(0, post.Downvotes - 1);
+            post.User.Reputation += 2;
+        }
     }
 
     [Authorize]
