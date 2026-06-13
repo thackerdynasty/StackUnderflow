@@ -1,3 +1,4 @@
+@using System.Security.Claims
 @model SUThread
 
 @{
@@ -8,6 +9,7 @@
     var questionVote = ViewBag.QuestionVote is int currentQuestionVote ? currentQuestionVote : 0;
     var answerVotes = ViewBag.AnswerVotes as IDictionary<int, int> ?? new Dictionary<int, int>();
     var selectedSort = Context.Request.Query["sort"].ToString();
+    var currentUserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
 
     var postsQuery = (Model.Posts ?? Array.Empty<Post>())
         .OrderByDescending(post => post.IsAcceptedAnswer);
@@ -21,6 +23,8 @@
             .ThenBy(post => post.CreatedAt)
             .ToList()
     };
+    
+    bool isThreadOwner = User.Identity?.IsAuthenticated == true && Model.UserId == currentUserId;
 }
 
 <section class="thread-detail">
@@ -39,11 +43,25 @@
     <article class="thread-post">
         <aside class="vote-column" aria-label="Question score">
             <form asp-controller="Thread" asp-action="VoteQuestion" asp-route-id="@Model.Id" method="post" class="vote-form">
-                <button type="submit" name="vote" value="up" class="vote-control @(questionVote == 1 ? "is-selected" : "")" aria-label="Upvote question">▲</button>
+                @if (isThreadOwner)
+                {
+                    <button type="submit" name="vote" value="up" class="vote-control @(questionVote == 1 ? "is-selected" : "")" aria-label="Upvote question" disabled>▲</button>
+                }
+                else
+                {
+                    <button type="submit" name="vote" value="up" class="vote-control @(questionVote == 1 ? "is-selected" : "")" aria-label="Upvote question">▲</button>
+                }
             </form>
             <strong>@questionScore</strong>
             <form asp-controller="Thread" asp-action="VoteQuestion" asp-route-id="@Model.Id" method="post" class="vote-form">
-                <button type="submit" name="vote" value="down" class="vote-control @(questionVote == -1 ? "is-selected" : "")" aria-label="Downvote question">▼</button>
+                @if (isThreadOwner)
+                {
+                    <button type="submit" name="vote" value="down" class="vote-control @(questionVote == -1 ? "is-selected" : "")" aria-label="Downvote question" disabled>▼</button>
+                }
+                else
+                {
+                    <button type="submit" name="vote" value="down" class="vote-control @(questionVote == -1 ? "is-selected" : "")" aria-label="Downvote question">▼</button>
+                }
             </form>
             @if (Model.IsSolved)
             {
@@ -63,7 +81,7 @@
 
                 <div class="user-card">
                     <span>asked @Model.CreatedAt.ToString("MMM d, yyyy")</span>
-                    <strong>@authorName</strong>
+                    <a asp-controller="Profile" asp-action="Details" asp-route-id="@Model.UserId"><strong>@authorName</strong></a>
                     <span>@(Model.User?.Reputation ?? 0) reputation</span>
                 </div>
             </footer>
@@ -95,19 +113,34 @@
             {
                 var answerScore = post.Upvotes - post.Downvotes;
                 var postAuthorName = post.User?.UserName ?? "unknown user";
+                var isAnswerOwner = User.Identity?.IsAuthenticated == true && post.UserId == currentUserId;
                 var answerVote = answerVotes.TryGetValue(post.Id, out var currentAnswerVote) ? currentAnswerVote : 0;
                 var comments = (post.Comments ?? Array.Empty<Comment>())
                     .OrderBy(comment => comment.CreatedAt)
                     .ToList();
 
-                <article class="thread-post answer-post @(post.IsAcceptedAnswer ? "accepted-answer" : "")">
+                <article id="answer-@post.Id" class="thread-post answer-post @(post.IsAcceptedAnswer ? "accepted-answer" : "")" style="scroll-margin-top: 1rem;">
                     <aside class="vote-column" aria-label="Answer score">
                         <form asp-controller="Thread" asp-action="VoteAnswer" asp-route-threadId="@Model.Id" asp-route-postId="@post.Id" method="post" class="vote-form">
-                            <button type="submit" name="vote" value="up" class="vote-control @(answerVote == 1 ? "is-selected" : "")" aria-label="Upvote answer">▲</button>
+                            @if (isAnswerOwner)
+                            {
+                                <button type="submit" name="vote" value="up" class="vote-control @(answerVote == 1 ? "is-selected" : "")" aria-label="Upvote answer" disabled>▲</button>
+                            }
+                            else
+                            {
+                                <button type="submit" name="vote" value="up" class="vote-control @(answerVote == 1 ? "is-selected" : "")" aria-label="Upvote answer">▲</button>
+                            }
                         </form>
                         <strong>@answerScore</strong>
                         <form asp-controller="Thread" asp-action="VoteAnswer" asp-route-threadId="@Model.Id" asp-route-postId="@post.Id" method="post" class="vote-form">
-                            <button type="submit" name="vote" value="down" class="vote-control @(answerVote == -1 ? "is-selected" : "")" aria-label="Downvote answer">▼</button>
+                            @if (isAnswerOwner)
+                            {
+                                <button type="submit" name="vote" value="down" class="vote-control @(answerVote == -1 ? "is-selected" : "")" aria-label="Downvote answer" disabled>▼</button>
+                            }
+                            else
+                            {
+                                <button type="submit" name="vote" value="down" class="vote-control @(answerVote == -1 ? "is-selected" : "")" aria-label="Downvote answer">▼</button>
+                            }
                         </form>
                         @if (post.IsAcceptedAnswer)
                         {
@@ -127,17 +160,28 @@
 
                             <div class="user-card">
                                 <span>answered @post.CreatedAt.ToString("MMM d, yyyy")</span>
-                                <strong>@postAuthorName</strong>
+                                <a asp-controller="Profile" asp-action="Details" asp-route-id="@post.UserId"><strong>@postAuthorName</strong></a>
                                 <span>@(post.User?.Reputation ?? 0) reputation</span>
                             </div>
                         </footer>
+                        
+                        @if (isThreadOwner && !post.IsAcceptedAnswer && !Model.IsSolved)
+                        {
+                            <form asp-controller="Thread" asp-action="AcceptAnswer" asp-route-id="@Model.Id" asp-route-postId="@post.Id" method="post">
+                                <button type="submit" 
+                                        class="btn btn-primary" 
+                                        style="background-color: green; outline-color: green; border-color: green;"
+                                        title="Mark as accepted answer" 
+                                        aria-label="Mark as accepted answer">Accept Answer</button>
+                            </form>
+                        }
                      
                         <div class="comment-list">
                             @foreach (var comment in comments)
                             {
-                                <div class="comment">
+                                <div id="comment-@comment.Id" class="comment" style="scroll-margin-top: 1rem;">
                                     <span>@comment.Content</span>
-                                    <span class="comment-meta">- @(comment.User?.UserName ?? "unknown user") @comment.CreatedAt.ToString("MMM d, yyyy")</span>
+                                    <span class="comment-meta">- <a asp-controller="Profile" asp-action="Details" asp-route-id="@comment.UserId">@(comment.User?.UserName ?? "unknown user")</a> @comment.CreatedAt.ToString("MMM d, yyyy")</span>
                                 </div>
                             }
                             <form asp-action="PostComment" asp-route-id="@Model.Id" asp-route-postId="@post.Id" method="post">
