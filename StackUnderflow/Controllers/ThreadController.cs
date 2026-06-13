@@ -50,6 +50,9 @@ public class ThreadController : Controller
                 ViewBag.AnswerVotes = _context.PostVotes
                     .Where(v => v.UserId == userId && v.Post.SUThreadId == id)
                     .ToDictionary(v => v.PostId, v => v.Value);
+
+                ViewBag.IsSaved = _context.SavedThreads
+                    .Any(s => s.UserId == userId && s.SUThreadId == id);
             }
 
             if (userId != thread.UserId)
@@ -65,6 +68,40 @@ public class ThreadController : Controller
         _context.SaveChanges();
         
         return View(thread);
+    }
+
+    // Toggle saving (bookmarking) a thread for the current user: saves it if not
+    // already saved, otherwise removes the existing save.
+    [Authorize]
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    [Route("/Thread/{id}/Save")]
+    public IActionResult ToggleSave(int id)
+    {
+        var threadExists = _context.SUThreads.Any(t => t.Id == id);
+        if (!threadExists)
+            return NotFound();
+
+        var userId = User.FindFirst(ClaimTypes.NameIdentifier)!.Value;
+        var existing = _context.SavedThreads.FirstOrDefault(s => s.UserId == userId && s.SUThreadId == id);
+
+        if (existing == null)
+        {
+            _context.SavedThreads.Add(new SavedThread
+            {
+                UserId = userId,
+                SUThreadId = id,
+                SavedAt = DateTime.UtcNow
+            });
+        }
+        else
+        {
+            _context.SavedThreads.Remove(existing);
+        }
+
+        _context.SaveChanges();
+
+        return RedirectToAction(nameof(Detail), new { id });
     }
 
     [Authorize]
