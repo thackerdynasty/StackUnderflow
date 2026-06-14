@@ -6,7 +6,7 @@ public class Post
 {
     [Key]
     public int Id { get; set; }
-    [MaxLength(600)]
+    
     public string Content { get; set; }
     
     public DateTime CreatedAt { get; set; }

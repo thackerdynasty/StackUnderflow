@@ -92,5 +92,6 @@ function attachLivePreview(textareaSelector, previewSelector) {
 // Attach to the answer textarea preview
 document.addEventListener('DOMContentLoaded', function() {
     attachLivePreview('#answer-content', '#answer-preview');
+    attachLivePreview('#thread-content', '#thread-preview');
 });
 
