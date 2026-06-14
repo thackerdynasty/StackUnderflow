@@ -3,12 +3,14 @@
 
 // Write your JavaScript code.
 // Highlight all code blocks on the page. highlightAll will handle <pre><code> blocks
-hljs.highlightAll();
+if (window.hljs) {
+    hljs.highlightAll();
 
-// Additionally, ensure any code elements inside post-content are highlighted (defensive)
-document.querySelectorAll('div.post-content pre code').forEach((block) => {
-    try { hljs.highlightElement(block); } catch (e) { /* ignore */ }
-});
+    // Additionally, ensure any code elements inside post-content are highlighted (defensive)
+    document.querySelectorAll('div.post-content pre code').forEach((block) => {
+        try { hljs.highlightElement(block); } catch (e) { /* ignore */ }
+    });
+}
 
 // -----------------------------
 // Live preview for answer textarea
