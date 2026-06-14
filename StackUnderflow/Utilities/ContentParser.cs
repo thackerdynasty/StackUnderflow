@@ -35,7 +35,17 @@ public static class ContentParser
             return $"<pre><code>{encoded}</code></pre>";
         }
 
-        var result = pattern.Replace(content, new MatchEvaluator(Evaluator));
-        return result;
+        var result = new System.Text.StringBuilder();
+        var lastIndex = 0;
+
+        foreach (Match match in pattern.Matches(content))
+        {
+            result.Append(WebUtility.HtmlEncode(content[lastIndex..match.Index]));
+            result.Append(Evaluator(match));
+            lastIndex = match.Index + match.Length;
+        }
+
+        result.Append(WebUtility.HtmlEncode(content[lastIndex..]));
+        return result.ToString();
     }
 }
