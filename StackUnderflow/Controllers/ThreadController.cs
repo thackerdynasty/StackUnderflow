@@ -21,7 +21,102 @@ public class ThreadController : Controller
     {
         return View();
     }
-    
+
+    [Route("/Thread/Create")]
+    public IActionResult Create()
+    {
+        return View();
+    }
+
+    [Authorize]
+    [HttpPost]
+    [Route("/Thread/Create")]
+    public IActionResult Create(string title, string content)
+    {
+        if (string.IsNullOrWhiteSpace(title) || string.IsNullOrWhiteSpace(content))
+        {
+            TempData["Error"] = "Title and content are required.";
+            return RedirectToAction(nameof(Create));
+        }
+        var thread = new SUThread
+        {
+            Title = title.Trim(),
+            Content = content.Trim(),
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow,
+            UpvoteCount = 0,
+            DownvoteCount = 0,
+            ViewCount = 0,
+            IsSolved = false,
+            UserId = User.FindFirst(ClaimTypes.NameIdentifier)!.Value,
+            Posts = new List<Post>()
+        };
+        _context.SUThreads.Add(thread);
+        _context.SaveChanges();
+        return RedirectToAction(nameof(Detail), new { id = thread.Id });
+    }
+
+    [Route("/Thread/{id}/Edit")]
+    public IActionResult Edit(int id)
+    {
+        var thread = _context.SUThreads.FirstOrDefault(t => t.Id == id);
+        if (thread == null)
+            return NotFound();
+        if (thread.UserId != User.FindFirst(ClaimTypes.NameIdentifier)?.Value)
+            return Forbid();
+        return View(thread);
+    }
+
+    [Authorize]
+    [HttpPost]
+    [Route("/Thread/{id}/Edit")]
+    public IActionResult Edit(int id, string title, string content)
+    {
+        var thread = _context.SUThreads.FirstOrDefault(t => t.Id == id);
+        if (thread == null)
+            return NotFound();
+        if (thread.UserId != User.FindFirst(ClaimTypes.NameIdentifier)?.Value)
+            return Forbid();
+        if (string.IsNullOrWhiteSpace(title) || string.IsNullOrWhiteSpace(content))
+        {
+            TempData["Error"] = "Title and content are required.";
+            return RedirectToAction(nameof(Edit), new { id });
+        }
+        thread.Title = title.Trim();
+        thread.Content = content.Trim();
+        thread.UpdatedAt = DateTime.UtcNow;
+
+        _context.SaveChanges();
+
+        return RedirectToAction(nameof(Detail), new { id });
+    }
+
+    [Route("/Thread/{id}/Delete")]
+    public IActionResult Delete(int id)
+    {
+        var thread = _context.SUThreads.FirstOrDefault(t => t.Id == id);
+        if (thread == null)
+            return NotFound();
+        if (thread.UserId != User.FindFirst(ClaimTypes.NameIdentifier)?.Value)
+            return Forbid();
+        return View(thread);
+    }
+
+    [Authorize]
+    [HttpPost]
+    [Route("/Thread/{id}/Delete")]
+    public IActionResult DeleteConfirmed(int id)
+    {
+        var thread = _context.SUThreads.FirstOrDefault(t => t.Id == id);
+        if (thread == null)
+            return NotFound();
+        if (thread.UserId != User.FindFirst(ClaimTypes.NameIdentifier)?.Value)
+            return Forbid();
+        _context.SUThreads.Remove(thread);
+        _context.SaveChanges();
+        return Redirect("/");
+    }
+
     [Route("/Thread/{id}")]
     public IActionResult Detail(int id)
     {
@@ -93,7 +188,7 @@ public class ThreadController : Controller
             IsAcceptedAnswer = false,
             UserId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)!.Value,
             SUThreadId = id,
-            Comments = new List<Comment>()
+            Comments = []
         };
 
         _context.Posts.Add(post);
