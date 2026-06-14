@@ -37,7 +37,6 @@
                 <span>Viewed @Model.ViewCount @(Model.ViewCount == 1 ? "time" : "times")</span>
             </div>
         </div>
-        <a class="btn btn-primary ask-button" href="#">Ask Question</a>
     </header>
 
     <article class="thread-post">
@@ -74,9 +73,11 @@
 
             <footer class="post-footer">
                 <div class="post-actions">
-                    <a href="#">Share</a>
-                    <a href="#">Improve this question</a>
-                    <a href="#">Follow</a>
+					@if (isThreadOwner)
+                    {
+                        <a asp-controller="Thread" asp-action="Edit" asp-route-id="@Model.Id">Edit</a>
+                        <a asp-controller="Thread" asp-action="Delete" asp-route-id="@Model.Id">Delete</a>
+                    }
                 </div>
 
                 <div class="user-card">
