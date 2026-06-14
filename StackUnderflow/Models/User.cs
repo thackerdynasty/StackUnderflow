@@ -14,5 +14,4 @@ public class User : IdentityUser
     public ICollection<SUThread> SUThreads { get; set; }
     public ICollection<ThreadVote> ThreadVotes { get; set; }
     public ICollection<PostVote> PostVotes { get; set; }
-    public ICollection<SavedThread> SavedThreads { get; set; }
 }

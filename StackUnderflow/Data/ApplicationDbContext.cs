@@ -11,7 +11,6 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public DbSet<Comment> Comments { get; set; }
     public DbSet<ThreadVote> ThreadVotes { get; set; }
     public DbSet<PostVote> PostVotes { get; set; }
-    public DbSet<SavedThread> SavedThreads { get; set; }
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -77,23 +76,6 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
 
         builder.Entity<PostVote>()
             .HasIndex(v => new { v.UserId, v.PostId })
-            .IsUnique();
-
-        builder.Entity<SavedThread>()
-            .HasOne(s => s.User)
-            .WithMany(u => u.SavedThreads)
-            .HasForeignKey(s => s.UserId)
-            .OnDelete(DeleteBehavior.NoAction);
-
-        builder.Entity<SavedThread>()
-            .HasOne(s => s.SUThread)
-            .WithMany(t => t.SavedBy)
-            .HasForeignKey(s => s.SUThreadId)
-            .OnDelete(DeleteBehavior.NoAction);
-
-        // A user can save a given thread only once.
-        builder.Entity<SavedThread>()
-            .HasIndex(s => new { s.UserId, s.SUThreadId })
             .IsUnique();
     }
 }
