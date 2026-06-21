@@ -200,32 +200,6 @@ public class ThreadController : Controller
     [Authorize]
     [HttpPost]
     [ValidateAntiForgeryToken]
-    [Route("/Thread/{threadId}/Answer/{postId}/Edit")]
-    public IActionResult EditAnswer(int threadId, int postId, string content)
-    {
-        var post = _context.Posts.FirstOrDefault(p => p.Id == postId && p.SUThreadId == threadId);
-        if (post == null)
-            return NotFound();
-
-        if (post.UserId != User.FindFirst(ClaimTypes.NameIdentifier)?.Value)
-            return Forbid();
-
-        if (string.IsNullOrWhiteSpace(content))
-        {
-            TempData["PostEditError"] = "Answer content is required.";
-            return RedirectToAction(nameof(Detail), new { id = threadId, editPostId = postId });
-        }
-
-        post.Content = content.Trim();
-        post.UpdatedAt = DateTime.UtcNow;
-        _context.SaveChanges();
-
-        return RedirectToAction(nameof(Detail), null, new { id = threadId }, $"answer-{postId}");
-    }
-
-    [Authorize]
-    [HttpPost]
-    [ValidateAntiForgeryToken]
     [Route("/Thread/{threadId}/Answer/{postId}/Delete")]
     public IActionResult DeleteAnswer(int threadId, int postId)
     {
@@ -434,6 +408,34 @@ public class ThreadController : Controller
 
         return RedirectToAction(nameof(Detail), new { id = threadId });
     }
+
+    [Authorize]
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    [Route("/Thread/{threadId}/Answer/{postId}/Edit")]
+    public IActionResult EditAnswer(int threadId, int postId, string content)
+    {
+        if (string.IsNullOrWhiteSpace(content))
+        {
+            TempData["PostEditError"] = "Answer content is required.";
+            return RedirectToAction(nameof(Detail), new { id = threadId, editPostId = postId });
+        }
+
+        var post = _context.Posts.FirstOrDefault(p => p.Id == postId && p.SUThreadId == threadId);
+        if (post == null)
+            return NotFound();
+
+        var userId = User.FindFirst(ClaimTypes.NameIdentifier)!.Value;
+        if (post.UserId != userId)
+            return Forbid();
+
+        post.Content = content.Trim();
+        post.UpdatedAt = DateTime.UtcNow;
+        _context.SaveChanges();
+
+        return RedirectToAction(nameof(Detail), new { id = threadId });
+    }
+
 
     private static int? ParseVoteValue(string vote)
     {
