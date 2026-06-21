@@ -93,5 +93,122 @@ function attachLivePreview(textareaSelector, previewSelector) {
 document.addEventListener('DOMContentLoaded', function() {
     attachLivePreview('#answer-content', '#answer-preview');
     attachLivePreview('#thread-content', '#thread-preview');
+    attachQuestionFilters();
+    attachAnswerSort();
 });
 
+// -----------------------------
+// Home page question filters
+// -----------------------------
+function attachQuestionFilters() {
+    const filterBar = document.querySelector('.question-tabs');
+    const questionList = document.querySelector('.question-list');
+    if (!filterBar || !questionList) return;
+
+    const filterButtons = Array.from(filterBar.querySelectorAll('[data-question-filter]'));
+    const questions = Array.from(questionList.querySelectorAll('.question-summary'));
+    const emptyState = document.querySelector('.question-filter-empty');
+    if (filterButtons.length === 0 || questions.length === 0) return;
+
+    const numberFromData = (question, name) => Number(question.dataset[name]) || 0;
+    const createdAt = (question) => Date.parse(question.dataset.createdAt) || 0;
+    const newestFirst = (left, right) => createdAt(right) - createdAt(left);
+
+    const filters = {
+        new: {
+            includes: () => true,
+            compare: newestFirst
+        },
+        trending: {
+            includes: (question) => numberFromData(question, 'recentAnswers') > 0,
+            compare: (left, right) =>
+                numberFromData(right, 'recentAnswers') - numberFromData(left, 'recentAnswers')
+                || numberFromData(right, 'upvotes') - numberFromData(left, 'upvotes')
+                || newestFirst(left, right)
+        },
+        viewed: {
+            includes: () => true,
+            compare: (left, right) =>
+                numberFromData(right, 'views') - numberFromData(left, 'views')
+                || newestFirst(left, right)
+        },
+        upvoted: {
+            includes: () => true,
+            compare: (left, right) =>
+                numberFromData(right, 'upvotes') - numberFromData(left, 'upvotes')
+                || newestFirst(left, right)
+        }
+    };
+
+    const applyFilter = (filterName) => {
+        const selectedFilter = filters[filterName];
+        if (!selectedFilter) return;
+
+        const visibleQuestions = questions.filter(selectedFilter.includes).sort(selectedFilter.compare);
+        const visibleSet = new Set(visibleQuestions);
+
+        questions.forEach((question) => {
+            question.hidden = !visibleSet.has(question);
+        });
+        visibleQuestions.forEach((question) => questionList.appendChild(question));
+
+        if (emptyState) {
+            emptyState.hidden = visibleQuestions.length !== 0;
+        }
+        questionList.hidden = visibleQuestions.length === 0;
+
+        filterButtons.forEach((button) => {
+            const isActive = button.dataset.questionFilter === filterName;
+            button.classList.toggle('active', isActive);
+            button.setAttribute('aria-pressed', String(isActive));
+        });
+    };
+
+    filterBar.addEventListener('click', (event) => {
+        const button = event.target.closest('[data-question-filter]');
+        if (!button || !filterBar.contains(button)) return;
+
+        applyFilter(button.dataset.questionFilter);
+    });
+
+    const initialFilter = filterButtons.find((button) => button.classList.contains('active'));
+    applyFilter(initialFilter?.dataset.questionFilter || 'new');
+}
+
+// -----------------------------
+// Thread detail answer sorting
+// -----------------------------
+function attachAnswerSort() {
+    const sortSelect = document.querySelector('.answer-sort');
+    const answerList = document.querySelector('.answer-list');
+    if (!sortSelect || !answerList) return;
+
+    const answers = Array.from(answerList.querySelectorAll('.answer-post'));
+    if (answers.length === 0) return;
+
+    const score = (answer) => Number(answer.dataset.answerScore) || 0;
+    const createdAt = (answer) => Date.parse(answer.dataset.answerCreatedAt) || 0;
+    const isAccepted = (answer) => answer.dataset.answerAccepted === 'true';
+    const acceptedFirst = (left, right) => Number(isAccepted(right)) - Number(isAccepted(left));
+
+    const comparators = {
+        score: (left, right) =>
+            acceptedFirst(left, right)
+            || score(right) - score(left)
+            || createdAt(left) - createdAt(right),
+        newest: (left, right) =>
+            acceptedFirst(left, right)
+            || createdAt(right) - createdAt(left),
+        oldest: (left, right) =>
+            acceptedFirst(left, right)
+            || createdAt(left) - createdAt(right)
+    };
+
+    const sortAnswers = () => {
+        const compare = comparators[sortSelect.value] || comparators.score;
+        answers.sort(compare).forEach((answer) => answerList.appendChild(answer));
+    };
+
+    sortSelect.addEventListener('change', sortAnswers);
+    sortAnswers();
+}
