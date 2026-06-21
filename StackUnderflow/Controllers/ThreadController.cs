@@ -200,6 +200,39 @@ public class ThreadController : Controller
     [Authorize]
     [HttpPost]
     [ValidateAntiForgeryToken]
+    [Route("/Thread/{threadId}/Answer/{postId}/Delete")]
+    public IActionResult DeleteAnswer(int threadId, int postId)
+    {
+        var post = _context.Posts
+            .Include(p => p.Comments)
+            .Include(p => p.Votes)
+            .FirstOrDefault(p => p.Id == postId && p.SUThreadId == threadId);
+        if (post == null)
+            return NotFound();
+
+        if (post.UserId != User.FindFirst(ClaimTypes.NameIdentifier)?.Value)
+            return Forbid();
+
+        var thread = _context.SUThreads.FirstOrDefault(t => t.Id == threadId);
+        if (thread == null)
+            return NotFound();
+
+        if (post.IsAcceptedAnswer)
+        {
+            thread.IsSolved = false;
+        }
+
+        _context.Comments.RemoveRange(post.Comments);
+        _context.PostVotes.RemoveRange(post.Votes);
+        _context.Posts.Remove(post);
+        _context.SaveChanges();
+
+        return RedirectToAction(nameof(Detail), new { id = threadId });
+    }
+
+    [Authorize]
+    [HttpPost]
+    [ValidateAntiForgeryToken]
     [Route("/Thread/{id}/Post/{postId}/Comment")]
     public IActionResult PostComment(int id, int postId, string content)
     {
@@ -208,6 +241,10 @@ public class ThreadController : Controller
             TempData["CommentError"] = "Comment content is required.";
             return RedirectToAction(nameof(Detail), new { id });
         }
+
+        var postExists = _context.Posts.Any(p => p.Id == postId && p.SUThreadId == id);
+        if (!postExists)
+            return NotFound();
 
         var comment = new Comment
         {
@@ -222,6 +259,56 @@ public class ThreadController : Controller
         _context.SaveChanges();
         
         return RedirectToAction(nameof(Detail), new { id });
+    }
+
+    [Authorize]
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    [Route("/Thread/{threadId}/Comment/{commentId}/Edit")]
+    public IActionResult EditComment(int threadId, int commentId, string content)
+    {
+        var comment = _context.Comments
+            .Include(c => c.Post)
+            .FirstOrDefault(c => c.Id == commentId && c.Post.SUThreadId == threadId);
+        if (comment == null)
+            return NotFound();
+
+        if (comment.UserId != User.FindFirst(ClaimTypes.NameIdentifier)?.Value)
+            return Forbid();
+
+        if (string.IsNullOrWhiteSpace(content))
+        {
+            TempData["CommentEditError"] = "Comment content is required.";
+            return RedirectToAction(nameof(Detail), new { id = threadId, editCommentId = commentId });
+        }
+
+        comment.Content = content.Trim();
+        comment.UpdatedAt = DateTime.UtcNow;
+        _context.SaveChanges();
+
+        return RedirectToAction(nameof(Detail), null, new { id = threadId }, $"comment-{commentId}");
+    }
+
+    [Authorize]
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    [Route("/Thread/{threadId}/Comment/{commentId}/Delete")]
+    public IActionResult DeleteComment(int threadId, int commentId)
+    {
+        var comment = _context.Comments
+            .Include(c => c.Post)
+            .FirstOrDefault(c => c.Id == commentId && c.Post.SUThreadId == threadId);
+        if (comment == null)
+            return NotFound();
+
+        if (comment.UserId != User.FindFirst(ClaimTypes.NameIdentifier)?.Value)
+            return Forbid();
+
+        var postId = comment.PostId;
+        _context.Comments.Remove(comment);
+        _context.SaveChanges();
+
+        return RedirectToAction(nameof(Detail), null, new { id = threadId }, $"answer-{postId}");
     }
 
     [Authorize]
@@ -321,6 +408,34 @@ public class ThreadController : Controller
 
         return RedirectToAction(nameof(Detail), new { id = threadId });
     }
+
+    [Authorize]
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    [Route("/Thread/{threadId}/Answer/{postId}/Edit")]
+    public IActionResult EditAnswer(int threadId, int postId, string content)
+    {
+        if (string.IsNullOrWhiteSpace(content))
+        {
+            TempData["PostEditError"] = "Answer content is required.";
+            return RedirectToAction(nameof(Detail), new { id = threadId, editPostId = postId });
+        }
+
+        var post = _context.Posts.FirstOrDefault(p => p.Id == postId && p.SUThreadId == threadId);
+        if (post == null)
+            return NotFound();
+
+        var userId = User.FindFirst(ClaimTypes.NameIdentifier)!.Value;
+        if (post.UserId != userId)
+            return Forbid();
+
+        post.Content = content.Trim();
+        post.UpdatedAt = DateTime.UtcNow;
+        _context.SaveChanges();
+
+        return RedirectToAction(nameof(Detail), new { id = threadId });
+    }
+
 
     private static int? ParseVoteValue(string vote)
     {
