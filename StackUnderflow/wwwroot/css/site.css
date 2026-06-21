@@ -366,8 +366,45 @@ body {
   text-decoration: none;
 }
 
-.post-actions a:hover {
+.post-actions a:hover,
+.link-form button:hover,
+.comment-actions a:hover,
+.comment-actions button:hover {
   color: #0074cc;
+}
+
+.link-form {
+  display: inline;
+  margin: 0;
+}
+
+.link-form button {
+  border: 0;
+  padding: 0;
+  color: #6a737c;
+  background: transparent;
+  font: inherit;
+  line-height: inherit;
+  cursor: pointer;
+}
+
+.inline-edit-form,
+.inline-comment-edit-form {
+  margin: 0;
+}
+
+.inline-edit-form textarea,
+.inline-comment-edit-form textarea {
+  resize: vertical;
+  border-radius: 3px;
+  line-height: 1.45;
+}
+
+.inline-edit-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .5rem;
+  margin-top: .6rem;
 }
 
 .user-card {
@@ -426,6 +463,21 @@ body {
 
 .comment-meta {
   color: #6a737c;
+}
+
+.comment-actions {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: .45rem;
+  margin-left: .45rem;
+  color: #6a737c;
+  font-size: .82rem;
+}
+
+.comment-actions a,
+.comment-actions button {
+  color: #6a737c;
+  text-decoration: none;
 }
 
 .empty-answers {

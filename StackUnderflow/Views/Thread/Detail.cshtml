@@ -10,6 +10,12 @@
     var questionVote = ViewBag.QuestionVote is int currentQuestionVote ? currentQuestionVote : 0;
     var answerVotes = ViewBag.AnswerVotes as IDictionary<int, int> ?? new Dictionary<int, int>();
     var selectedSort = Context.Request.Query["sort"].ToString();
+    var editPostId = int.TryParse(Context.Request.Query["editPostId"], out var requestedPostEditId)
+        ? requestedPostEditId
+        : (int?)null;
+    var editCommentId = int.TryParse(Context.Request.Query["editCommentId"], out var requestedCommentEditId)
+        ? requestedCommentEditId
+        : (int?)null;
     var currentUserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
 
     var postsQuery = (Model.Posts ?? Array.Empty<Post>())
@@ -151,13 +157,35 @@
                     </aside>
 
                     <div class="post-body">
-                        <div class="post-content">@Html.Raw(ContentParser.RenderCodeBlocks(post.Content))</div>
+                        @if (editPostId == post.Id && isAnswerOwner)
+                        {
+                            <form asp-controller="Thread" asp-action="EditAnswer" asp-route-threadId="@Model.Id" asp-route-postId="@post.Id" method="post" class="inline-edit-form">
+                                @if (TempData["PostEditError"] is string postEditError)
+                                {
+                                    <div class="text-danger answer-error">@postEditError</div>
+                                }
+                                <label for="post-edit-@post.Id" class="form-label">Edit your answer</label>
+                                <textarea id="post-edit-@post.Id" name="content" class="form-control" rows="8">@post.Content</textarea>
+                                <div class="inline-edit-actions">
+                                    <button type="submit" class="btn btn-primary btn-sm">Save</button>
+                                    <a asp-controller="Thread" asp-action="Detail" asp-route-id="@Model.Id" asp-fragment="answer-@post.Id" class="btn btn-secondary btn-sm">Cancel</a>
+                                </div>
+                            </form>
+                        }
+                        else
+                        {
+                            <div class="post-content">@Html.Raw(ContentParser.RenderCodeBlocks(post.Content))</div>
+                        }
                         
                         <footer class="post-footer">
                             <div class="post-actions">
-                                <a href="#">Share</a>
-                                <a href="#">Improve this answer</a>
-                                <a href="#">Follow</a>
+                                @if (isAnswerOwner)
+                                {
+                                    <a asp-controller="Thread" asp-action="Detail" asp-route-id="@Model.Id" asp-route-editPostId="@post.Id" asp-fragment="answer-@post.Id">Edit</a>
+                                    <form asp-controller="Thread" asp-action="DeleteAnswer" asp-route-threadId="@Model.Id" asp-route-postId="@post.Id" method="post" class="link-form">
+                                        <button type="submit" onclick="return confirm('Delete this answer?');">Delete</button>
+                                    </form>
+                                }
                             </div>
 
                             <div class="user-card">
@@ -181,13 +209,41 @@
                         <div class="comment-list">
                             @foreach (var comment in comments)
                             {
+                                var isCommentOwner = User.Identity?.IsAuthenticated == true && comment.UserId == currentUserId;
                                 <div id="comment-@comment.Id" class="comment" style="scroll-margin-top: 1rem;">
-                                    <span>@comment.Content</span>
-                                    <span class="comment-meta">- <a asp-controller="Profile" asp-action="Details" asp-route-id="@comment.UserId">@(comment.User?.UserName ?? "unknown user")</a> @comment.CreatedAt.ToString("MMM d, yyyy")</span>
+                                    @if (editCommentId == comment.Id && isCommentOwner)
+                                    {
+                                        <form asp-controller="Thread" asp-action="EditComment" asp-route-threadId="@Model.Id" asp-route-commentId="@comment.Id" method="post" class="inline-comment-edit-form">
+                                            @if (TempData["CommentEditError"] is string commentEditError)
+                                            {
+                                                <div class="text-danger answer-error">@commentEditError</div>
+                                            }
+                                            <label for="comment-edit-@comment.Id" class="visually-hidden">Edit comment</label>
+                                            <textarea id="comment-edit-@comment.Id" name="content" class="form-control form-control-sm" rows="3">@comment.Content</textarea>
+                                            <div class="inline-edit-actions">
+                                                <button type="submit" class="btn btn-primary btn-sm">Save</button>
+                                                <a asp-controller="Thread" asp-action="Detail" asp-route-id="@Model.Id" asp-fragment="comment-@comment.Id" class="btn btn-secondary btn-sm">Cancel</a>
+                                            </div>
+                                        </form>
+                                    }
+                                    else
+                                    {
+                                        <span>@comment.Content</span>
+                                        <span class="comment-meta">- <a asp-controller="Profile" asp-action="Details" asp-route-id="@comment.UserId">@(comment.User?.UserName ?? "unknown user")</a> @comment.CreatedAt.ToString("MMM d, yyyy")</span>
+                                        @if (isCommentOwner)
+                                        {
+                                            <span class="comment-actions">
+                                                <a asp-controller="Thread" asp-action="Detail" asp-route-id="@Model.Id" asp-route-editCommentId="@comment.Id" asp-fragment="comment-@comment.Id">Edit</a>
+                                                <form asp-controller="Thread" asp-action="DeleteComment" asp-route-threadId="@Model.Id" asp-route-commentId="@comment.Id" method="post" class="link-form">
+                                                    <button type="submit" onclick="return confirm('Delete this comment?');">Delete</button>
+                                                </form>
+                                            </span>
+                                        }
+                                    }
                                 </div>
                             }
                             <form asp-action="PostComment" asp-route-id="@Model.Id" asp-route-postId="@post.Id" method="post">
-                                <textarea id="comment-content" name="content" class="form-control-sm" placeholder="Your comment..." style="margin-top: 8px;"></textarea>
+                                <textarea id="comment-content-@post.Id" name="content" class="form-control-sm" placeholder="Your comment..." style="margin-top: 8px;"></textarea>
                                 <br/>
                                 <button type="submit" class="btn btn-secondary btn-sm">Add comment</button>
                             </form>
