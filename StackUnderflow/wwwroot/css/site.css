@@ -97,6 +97,7 @@ body {
 }
 
 .question-tab {
+  appearance: none;
   padding: .45rem .7rem;
   border: 1px solid #9fa6ad;
   border-right-width: 0;
@@ -104,6 +105,7 @@ body {
   font-size: .875rem;
   line-height: 1;
   background: #fff;
+  cursor: pointer;
 }
 
 .question-tab:first-child {
@@ -119,6 +121,21 @@ body {
   background: #e3e6e8;
 }
 
+.question-tab:hover {
+  background: #f1f2f3;
+}
+
+.question-tab:focus-visible {
+  position: relative;
+  z-index: 1;
+  outline: 2px solid #0a95ff;
+  outline-offset: 2px;
+}
+
+.question-tab.active:hover {
+  background: #e3e6e8;
+}
+
 .question-list {
   border-top: 1px solid #e3e6e8;
 }
@@ -129,6 +146,10 @@ body {
   gap: 1rem;
   padding: 1rem 0;
   border-bottom: 1px solid #e3e6e8;
+}
+
+.question-summary[hidden] {
+  display: none;
 }
 
 .question-stats {
