@@ -20,13 +20,11 @@ public class ProfileViewModel
     public int AnswerCount { get; set; }
     public int AcceptedAnswerCount { get; set; }
     public int CommentCount { get; set; }
-    public int SavedThreadCount { get; set; }
 
     // Activity lists
     public IReadOnlyList<SUThread> Questions { get; set; } = [];
     public IReadOnlyList<Post> Answers { get; set; } = [];
     public IReadOnlyList<Comment> Comments { get; set; } = [];
-    public IReadOnlyList<SUThread> SavedThreads { get; set; } = [];
 
     /// <summary>A short display name derived from the username/email for the avatar + heading.</summary>
     public string DisplayName

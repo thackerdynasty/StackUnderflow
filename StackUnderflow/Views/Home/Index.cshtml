@@ -10,15 +10,14 @@
             <h1>Top Questions</h1>
             <p>Browse the highest voted StackUnderflow threads.</p>
         </div>
-        <a class="btn btn-primary ask-button" href="#">Ask Question</a>
+        <a asp-controller="Thread" asp-action="Create" class="btn btn-primary ask-button">Ask Question</a>
     </div>
 
     <div class="question-tabs" aria-label="Question filters">
-        <span class="question-tab active">Interesting</span>
-        <span class="question-tab">Bountied</span>
-        <span class="question-tab">Hot</span>
-        <span class="question-tab">Week</span>
-        <span class="question-tab">Month</span>
+        <button type="button" class="question-tab active" data-question-filter="new" aria-pressed="true">New</button>
+        <button type="button" class="question-tab" data-question-filter="trending" aria-pressed="false">Trending</button>
+        <button type="button" class="question-tab" data-question-filter="viewed" aria-pressed="false">Most Viewed</button>
+        <button type="button" class="question-tab" data-question-filter="upvoted" aria-pressed="false">Most Upvoted</button>
     </div>
 
     @if (Model.Count == 0)
@@ -34,13 +33,18 @@
             @foreach (var thread in Model)
             {
                 var answerCount = thread.Posts?.Count ?? 0;
+                var recentAnswerCount = thread.Posts?.Count(post => post.CreatedAt >= DateTime.UtcNow.AddDays(-7)) ?? 0;
                 var score = thread.UpvoteCount - thread.DownvoteCount;
                 var authorName = thread.User?.UserName ?? "unknown user";
                 var excerpt = thread.Content.Length > 220
                     ? $"{thread.Content[..220]}..."
                     : thread.Content;
 
-                <article class="question-summary">
+                <article class="question-summary"
+                         data-created-at="@thread.CreatedAt.ToUniversalTime().ToString("O")"
+                         data-recent-answers="@recentAnswerCount"
+                         data-views="@thread.ViewCount"
+                         data-upvotes="@thread.UpvoteCount">
                     <div class="question-stats" aria-label="Question stats">
                         <div class="stat">
                             <strong>@score</strong>
@@ -72,6 +76,10 @@
                     </div>
                 </article>
             }
+        </div>
+        <div class="empty-questions question-filter-empty" hidden>
+            <h2>No trending questions</h2>
+            <p>No questions received answers in the last seven days.</p>
         </div>
     }
 </section>

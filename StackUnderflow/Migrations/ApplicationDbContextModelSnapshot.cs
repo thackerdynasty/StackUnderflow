@@ -190,7 +190,7 @@ namespace StackUnderflow.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("Comments");
+                    b.ToTable("Comments", (string)null);
                 });
 
             modelBuilder.Entity("StackUnderflow.Models.Post", b =>
@@ -233,7 +233,7 @@ namespace StackUnderflow.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("Posts");
+                    b.ToTable("Posts", (string)null);
                 });
 
             modelBuilder.Entity("StackUnderflow.Models.PostVote", b =>
@@ -267,7 +267,7 @@ namespace StackUnderflow.Migrations
                     b.HasIndex("UserId", "PostId")
                         .IsUnique();
 
-                    b.ToTable("PostVotes");
+                    b.ToTable("PostVotes", (string)null);
                 });
 
             modelBuilder.Entity("StackUnderflow.Models.SUThread", b =>
@@ -312,35 +312,7 @@ namespace StackUnderflow.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("SUThreads");
-                });
-
-            modelBuilder.Entity("StackUnderflow.Models.SavedThread", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<int>("SUThreadId")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime>("SavedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("UserId")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(450)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("SUThreadId");
-
-                    b.HasIndex("UserId", "SUThreadId")
-                        .IsUnique();
-
-                    b.ToTable("SavedThreads");
+                    b.ToTable("SUThreads", (string)null);
                 });
 
             modelBuilder.Entity("StackUnderflow.Models.ThreadVote", b =>
@@ -374,7 +346,7 @@ namespace StackUnderflow.Migrations
                     b.HasIndex("UserId", "SUThreadId")
                         .IsUnique();
 
-                    b.ToTable("ThreadVotes");
+                    b.ToTable("ThreadVotes", (string)null);
                 });
 
             modelBuilder.Entity("StackUnderflow.Models.User", b =>
@@ -575,25 +547,6 @@ namespace StackUnderflow.Migrations
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("StackUnderflow.Models.SavedThread", b =>
-                {
-                    b.HasOne("StackUnderflow.Models.SUThread", "SUThread")
-                        .WithMany("SavedBy")
-                        .HasForeignKey("SUThreadId")
-                        .OnDelete(DeleteBehavior.NoAction)
-                        .IsRequired();
-
-                    b.HasOne("StackUnderflow.Models.User", "User")
-                        .WithMany("SavedThreads")
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.NoAction)
-                        .IsRequired();
-
-                    b.Navigation("SUThread");
-
-                    b.Navigation("User");
-                });
-
             modelBuilder.Entity("StackUnderflow.Models.ThreadVote", b =>
                 {
                     b.HasOne("StackUnderflow.Models.SUThread", "SUThread")
@@ -624,8 +577,6 @@ namespace StackUnderflow.Migrations
                 {
                     b.Navigation("Posts");
 
-                    b.Navigation("SavedBy");
-
                     b.Navigation("Votes");
                 });
 
@@ -638,8 +589,6 @@ namespace StackUnderflow.Migrations
                     b.Navigation("Posts");
 
                     b.Navigation("SUThreads");
-
-                    b.Navigation("SavedThreads");
 
                     b.Navigation("ThreadVotes");
                 });
