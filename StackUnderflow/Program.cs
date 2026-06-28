@@ -43,6 +43,9 @@ app.UseAuthorization();
 
 app.MapStaticAssets();
 
+// Attribute-routed API controllers (e.g. Areas/Api).
+app.MapControllers();
+
 app.MapControllerRoute(
         name: "default",
         pattern: "{controller=Home}/{action=Index}/{id?}")
