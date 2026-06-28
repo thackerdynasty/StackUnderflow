@@ -288,7 +288,6 @@ body {
 }
 
 .thread-post {
-  position: relative;
   display: grid;
   grid-template-columns: 56px minmax(0, 1fr);
   gap: 1.1rem;
@@ -395,44 +394,6 @@ body {
   color: #0074cc;
 }
 
-.save-form {
-  position: absolute;
-  top: 1.35rem;
-  right: 0;
-  display: inline-flex;
-  margin: 0;
-}
-
-.save-control {
-  display: inline-flex;
-  align-items: center;
-  padding: 0;
-  border: 0;
-  background: none;
-  color: #6a737c;
-  line-height: 0;
-  cursor: pointer;
-}
-
-.save-control:hover,
-.save-control:focus-visible {
-  color: #0074cc;
-}
-
-.save-icon {
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 2;
-  stroke-linejoin: round;
-  transition: fill .1s ease-in-out;
-}
-
-.save-control.is-saved {
-  color: #0074cc;
-}
-
-.save-control.is-saved .save-icon {
-  fill: currentColor;
 .link-form {
   display: inline;
   margin: 0;

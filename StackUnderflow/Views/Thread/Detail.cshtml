@@ -39,19 +39,6 @@
     </header>
 
     <article class="thread-post">
-        @if (User.Identity?.IsAuthenticated == true)
-        {
-            <form asp-controller="Thread" asp-action="ToggleSave" asp-route-id="@Model.Id" method="post" class="save-form">
-                <button type="submit" class="save-control @(isSaved ? "is-saved" : "")"
-                        title="@(isSaved ? "Remove from your saved threads" : "Save this thread to your profile")"
-                        aria-label="@(isSaved ? "Remove from your saved threads" : "Save this thread to your profile")"
-                        aria-pressed="@(isSaved ? "true" : "false")">
-                    <svg class="save-icon" viewBox="0 0 24 24" width="24" height="24" aria-hidden="true" focusable="false">
-                        <path d="M6 2h12a1 1 0 0 1 1 1v19l-7-4.2L5 22V3a1 1 0 0 1 1-1z" />
-                    </svg>
-                </button>
-            </form>
-        }
         <aside class="vote-column" aria-label="Question score">
             <form asp-controller="Thread" asp-action="VoteQuestion" asp-route-id="@Model.Id" method="post" class="vote-form">
                 @if (isThreadOwner)
