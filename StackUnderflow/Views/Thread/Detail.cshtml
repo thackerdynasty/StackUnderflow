@@ -9,21 +9,32 @@
     var authorName = Model.User?.UserName ?? "unknown user";
     var questionVote = ViewBag.QuestionVote is int currentQuestionVote ? currentQuestionVote : 0;
     var answerVotes = ViewBag.AnswerVotes as IDictionary<int, int> ?? new Dictionary<int, int>();
+    var selectedSort = Context.Request.Query["sort"].ToString();
+    var currentUserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
     var editPostId = int.TryParse(Context.Request.Query["editPostId"], out var requestedPostEditId)
         ? requestedPostEditId
         : (int?)null;
     var editCommentId = int.TryParse(Context.Request.Query["editCommentId"], out var requestedCommentEditId)
         ? requestedCommentEditId
         : (int?)null;
-    var currentUserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+    var postsQuery = (Model.Posts ?? Array.Empty<Post>())
+        .OrderByDescending(post => post.IsAcceptedAnswer);
 
-    var posts = (Model.Posts ?? Array.Empty<Post>())
-        .OrderByDescending(post => post.IsAcceptedAnswer)
-        .ThenByDescending(post => post.Upvotes - post.Downvotes)
-        .ThenBy(post => post.CreatedAt)
-        .ToList();
+    var posts = selectedSort switch
+    {
+        "newest" => postsQuery.ThenByDescending(post => post.CreatedAt).ToList(),
+        "oldest" => postsQuery.ThenBy(post => post.CreatedAt).ToList(),
+        _ => postsQuery
+            .ThenByDescending(post => post.Upvotes - post.Downvotes)
+            .ThenBy(post => post.CreatedAt)
+            .ToList()
+    };
     
+
     bool isThreadOwner = User.Identity?.IsAuthenticated == true && Model.UserId == currentUserId;
+    bool isSaved = ViewBag.IsSaved is true;
+    
+    
 }
 
 <section class="thread-detail">
@@ -39,19 +50,6 @@
     </header>
 
     <article class="thread-post">
-        @if (User.Identity?.IsAuthenticated == true)
-        {
-            <form asp-controller="Thread" asp-action="ToggleSave" asp-route-id="@Model.Id" method="post" class="save-form">
-                <button type="submit" class="save-control @(isSaved ? "is-saved" : "")"
-                        title="@(isSaved ? "Remove from your saved threads" : "Save this thread to your profile")"
-                        aria-label="@(isSaved ? "Remove from your saved threads" : "Save this thread to your profile")"
-                        aria-pressed="@(isSaved ? "true" : "false")">
-                    <svg class="save-icon" viewBox="0 0 24 24" width="24" height="24" aria-hidden="true" focusable="false">
-                        <path d="M6 2h12a1 1 0 0 1 1 1v19l-7-4.2L5 22V3a1 1 0 0 1 1-1z" />
-                    </svg>
-                </button>
-            </form>
-        }
         <aside class="vote-column" aria-label="Question score">
             <form asp-controller="Thread" asp-action="VoteQuestion" asp-route-id="@Model.Id" method="post" class="vote-form">
                 @if (isThreadOwner)
@@ -81,7 +79,7 @@
         </aside>
 
         <div class="post-body">
-            <div class="post-content">@Html.Raw(ContentParser.RenderCodeBlocks(Model.Content))</div>
+            <div class="post-content">@Model.Content</div>
 
             <footer class="post-footer">
                 <div class="post-actions">
@@ -89,6 +87,15 @@
                     {
                         <a asp-controller="Thread" asp-action="Edit" asp-route-id="@Model.Id">Edit</a>
                         <a asp-controller="Thread" asp-action="Delete" asp-route-id="@Model.Id">Delete</a>
+                    }
+                    @if (User.Identity?.IsAuthenticated == true)
+                    {
+                        <form asp-controller="Thread" asp-action="ToggleSave" asp-route-id="@Model.Id" method="post" class="save-form">
+                            <button type="submit" class="btn-link save-control @(isSaved ? "is-saved" : "")"
+                                    title="@(isSaved ? "Remove from your saved threads" : "Save this thread to your profile")">
+                                @(isSaved ? "★ Saved" : "☆ Save")
+                            </button>
+                        </form>
                     }
                 </div>
 
@@ -104,11 +111,13 @@
     <section class="answers-section">
         <div class="answers-header">
             <h2>@answerCount @(answerCount == 1 ? "Answer" : "Answers")</h2>
-            <select class="form-select answer-sort" aria-label="Answer sort order">
-                <option value="score">Highest score</option>
-                <option value="newest">Newest</option>
-                <option value="oldest">Oldest</option>
-            </select>
+            <form method="get">
+                <select name="sort" class="form-select answer-sort" aria-label="Answer sort order" onchange="this.form.submit()">
+                    <option value="score" selected="@(selectedSort != "newest" && selectedSort != "oldest")">Highest score</option>
+                    <option value="newest" selected="@(selectedSort == "newest")">Newest</option>
+                    <option value="oldest" selected="@(selectedSort == "oldest")">Oldest</option>
+                </select>
+            </form>
         </div>
 
         @if (posts.Count == 0)

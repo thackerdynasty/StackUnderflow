@@ -433,6 +433,8 @@ body {
 
 .save-control.is-saved .save-icon {
   fill: currentColor;
+}
+
 .link-form {
   display: inline;
   margin: 0;
