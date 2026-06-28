@@ -1,0 +1,114 @@
+@model ProfileViewModel
+@{
+    ViewData["Title"] = Model.IsOwnProfile ? "My Profile" : $"{Model.DisplayName}'s Profile";
+}
+
+@if (TempData["ProfileStatus"] is string status)
+{
+    <div class="alert alert-info alert-dismissible fade show" role="alert">
+        @status
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
+<div class="info-card mb-4">
+    <div class="profile-header d-flex flex-column flex-sm-row align-items-sm-center gap-3 mb-4">
+        <div class="profile-avatar">
+            @if (Model.ProfilePicture is not null)
+            {
+                <img src="@Model.ProfilePicture" alt="@Model.DisplayName"
+                    onerror="this.style.display='none';this.nextElementSibling.style.display='flex';"/>
+                <span class="profile-avatar-initials" style="display:none;">@Model.Initials</span>
+            }
+            else
+            {
+                <span class="profile-avatar-initials">@Model.Initials</span>
+            }
+        </div>
+        <div>
+            <h1 class="h3 mb-1">@Model.DisplayName</h1>
+            <div class="text-muted small">
+                @Model.User.Email
+                <span class="mx-1">&bull;</span>
+                Member since @Model.JoinDate.ToString("MMMM d, yyyy")
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-3 mb-4">
+        <div class="col-6 col-md-3">
+            <div class="card text-center h-100">
+                <div class="card-body">
+                    <div class="display-6 fw-semibold text-warning">@Model.Reputation</div>
+                    <div class="text-muted text-uppercase small">Reputation</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="card text-center h-100">
+                <div class="card-body">
+                    <div class="display-6 fw-semibold">@Model.QuestionCount</div>
+                    <div class="text-muted text-uppercase small">Questions</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="card text-center h-100">
+                <div class="card-body">
+                    <div class="display-6 fw-semibold">@Model.AnswerCount</div>
+                    <div class="text-muted text-uppercase small">Answers</div>
+                    <div class="small text-success">@Model.AcceptedAnswerCount accepted</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="card text-center h-100">
+                <div class="card-body">
+                    <div class="display-6 fw-semibold">@Model.CommentCount</div>
+                    <div class="text-muted text-uppercase small">Comments</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <span class="fw-semibold">About me</span>
+            @if (Model.IsOwnProfile)
+            {
+                <button class="btn btn-sm btn-outline-secondary" type="button"
+                        data-bs-toggle="collapse" data-bs-target="#bioEditor" aria-expanded="false">
+                    Edit bio
+                </button>
+            }
+        </div>
+        <div class="card-body">
+            @if (string.IsNullOrWhiteSpace(Model.Bio))
+            {
+                <p class="text-muted fst-italic mb-0">
+                    @(Model.IsOwnProfile
+                        ? "You haven't written a bio yet. Tell other users about yourself!"
+                        : "This user hasn't written a bio yet.")
+                </p>
+            }
+            else
+            {
+                <p class="mb-0" style="white-space: pre-wrap;">@Model.Bio</p>
+            }
+
+            @if (Model.IsOwnProfile)
+            {
+                <div class="collapse mt-3" id="bioEditor">
+                    <form asp-action="UpdateBio" method="post">
+                        <div class="mb-2">
+                            <textarea name="bio" class="form-control" rows="4" maxlength="500"
+                                    placeholder="Share a short bio with the community...">@Model.Bio</textarea>
+                            <div class="form-text">Up to 500 characters. Visible to other users.</div>
+                        </div>
+                        <button type="submit" class="btn btn-primary btn-sm">Save bio</button>
+                    </form>
+                </div>
+            }
+        </div>
+    </div>
+</div>

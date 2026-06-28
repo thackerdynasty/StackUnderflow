@@ -1,0 +1,23 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Launch StackUnderflow",
+            "type": "coreclr",
+            "request": "launch",
+            "preLaunchTask": "build StackUnderflow",
+            "program": "${workspaceFolder}/StackUnderflow/bin/Debug/net10.0/StackUnderflow.dll",
+            "args": [],
+            "cwd": "${workspaceFolder}/StackUnderflow",
+            "stopAtEntry": false,
+            "serverReadyAction": {
+                "action": "openExternally",
+                "pattern": "\\bNow listening on:\\s+(http://\\S+)"
+            },
+            "env": {
+                "ASPNETCORE_ENVIRONMENT": "Development",
+                "ASPNETCORE_URLS": "http://localhost:5142"
+            }
+        }
+    ]
+}
