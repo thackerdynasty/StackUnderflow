@@ -105,7 +105,7 @@
 
                 <div class="user-card">
                     <span>asked @Model.CreatedAt.ToString("MMM d, yyyy")</span>
-                    <a asp-controller="Profile" asp-action="Details" asp-route-id="@Model.UserId"><strong>@authorName</strong></a>
+                    <a asp-controller="Profile" asp-action="Details" asp-route-id="@Model.UserId" data-profile-card-user-id="@Model.UserId"><strong>@authorName</strong></a>
                     <span>@(Model.User?.Reputation ?? 0) reputation</span>
                 </div>
             </footer>
@@ -233,7 +233,7 @@
 
                             <div class="user-card">
                                 <span>answered @post.CreatedAt.ToString("MMM d, yyyy")</span>
-                                <a asp-controller="Profile" asp-action="Details" asp-route-id="@post.UserId"><strong>@postAuthorName</strong></a>
+                                <a asp-controller="Profile" asp-action="Details" asp-route-id="@post.UserId" data-profile-card-user-id="@post.UserId"><strong>@postAuthorName</strong></a>
                                 <span>@(post.User?.Reputation ?? 0) reputation</span>
                             </div>
                         </footer>
@@ -274,7 +274,7 @@
                                     else
                                     {
                                         <span>@comment.Content</span>
-                                        <span class="comment-meta">- <a asp-controller="Profile" asp-action="Details" asp-route-id="@comment.UserId">@(comment.User?.UserName ?? "unknown user")</a> @comment.CreatedAt.ToString("MMM d, yyyy")</span>
+                                        <span class="comment-meta">- <a asp-controller="Profile" asp-action="Details" asp-route-id="@comment.UserId" data-profile-card-user-id="@comment.UserId">@(comment.User?.UserName ?? "unknown user")</a> @comment.CreatedAt.ToString("MMM d, yyyy")</span>
                                         @if (isCommentOwner)
                                         {
                                             <span class="comment-actions">

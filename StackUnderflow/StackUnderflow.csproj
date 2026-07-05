@@ -17,6 +17,7 @@
     </ItemGroup>
 
     <ItemGroup>
+      <Folder Include="Areas\Api\" />
       <Folder Include="Migrations\" />
     </ItemGroup>
 

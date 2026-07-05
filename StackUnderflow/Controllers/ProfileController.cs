@@ -59,6 +59,26 @@ public class ProfileController : Controller
         return View(nameof(Index), model);
     }
 
+    // GET: /Profile/InfoCard/{id}
+    [AllowAnonymous]
+    public async Task<IActionResult> InfoCard(string? id)
+    {
+        if (string.IsNullOrEmpty(id))
+        {
+            return NotFound();
+        }
+
+        var user = await _userManager.FindByIdAsync(id);
+        if (user is null)
+        {
+            return NotFound();
+        }
+
+        var isOwnProfile = User.Identity?.IsAuthenticated == true && id == _userManager.GetUserId(User);
+        var model = await BuildProfileAsync(user, isOwnProfile);
+        return PartialView("~/Views/_InfoCard.cshtml", model);
+    }
+
     private async Task<ProfileViewModel> BuildProfileAsync(User user, bool isOwnProfile)
     {
         var questions = await _dbContext.SUThreads

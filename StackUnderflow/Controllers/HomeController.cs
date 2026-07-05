@@ -6,15 +6,10 @@ using StackUnderflow.Models;
 
 namespace StackUnderflow.Controllers;
 
-public class HomeController : Controller
+public class HomeController(ApplicationDbContext context) : Controller
 {
-    private readonly ApplicationDbContext _context;
-    
-    public HomeController(ApplicationDbContext context)
-    {
-        _context = context;
-    }
-    
+    private readonly ApplicationDbContext _context = context;
+
     public IActionResult Index()
     {
         List<SUThread> threads = _context.SUThreads
