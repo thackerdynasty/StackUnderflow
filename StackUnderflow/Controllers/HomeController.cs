@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Net;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using StackUnderflow.Data;
@@ -15,14 +16,46 @@ public class HomeController : Controller
         _context = context;
     }
     
+    private const int PageSize = 5;
+
     public IActionResult Index()
     {
+        var totalCount = _context.SUThreads.Count();
+
         List<SUThread> threads = _context.SUThreads
             .Include(t => t.User)
             .Include(t => t.Posts)
-            .OrderByDescending(t => t.UpvoteCount)
-            .Take(10)
+            // Keep this ordering in sync with the paginated API so "Load More" pages line up.
+            .OrderByDescending(t => t.CreatedAt)
+            .ThenByDescending(t => t.Id)
+            .Take(PageSize)
             .ToList();
+
+        ViewData["PageSize"] = PageSize;
+        ViewData["CurrentPage"] = 1;
+        ViewData["TotalPages"] = (int)Math.Ceiling((double)totalCount / PageSize);
+
+        return View(threads);
+    }
+
+    [HttpPost]
+    public IActionResult Index(string query)
+    {
+        var threads = _context.SUThreads
+            .Where(t => t.Title.Contains(query) || t.Content.Contains(query))
+            .Include(t => t.User)
+            .Include(t => t.Posts)
+            .OrderByDescending(t => t.CreatedAt)
+            .ThenByDescending(t => t.Id)
+            .Take(PageSize)
+            .ToList();
+        
+        ViewData["PageSize"] = PageSize;
+        ViewData["CurrentPage"] = 1;
+        ViewData["TotalPages"] = (int)Math.Ceiling((double)threads.Count / PageSize);
+        
+        ViewData["Query"] = query;
+        
         return View(threads);
     }
 
