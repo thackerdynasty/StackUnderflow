@@ -10,14 +10,9 @@ namespace StackUnderflow.Areas.Api.Controllers;
 [Area("Api")]
 [Route("api/[controller]")]
 [Produces("application/json")]
-public class UserController : ControllerBase
+public class UserController(ApplicationDbContext dbContext) : ControllerBase
 {
-    private readonly ApplicationDbContext _dbContext;
-
-    public UserController(ApplicationDbContext dbContext)
-    {
-        _dbContext = dbContext;
-    }
+    private readonly ApplicationDbContext _dbContext = dbContext;
 
     // GET: /api/user
     [HttpGet]

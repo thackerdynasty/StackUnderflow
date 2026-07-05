@@ -55,6 +55,89 @@ body {
   line-height: 1;
 }
 
+.profile-hover-card {
+  position: fixed;
+  z-index: 1080;
+  width: min(420px, calc(100vw - 20px));
+  max-height: min(620px, calc(100vh - 20px));
+  overflow: auto;
+  color: #232629;
+  background: #fff;
+  border: 1px solid #d6d9dc;
+  border-radius: 6px;
+  box-shadow: 0 12px 32px rgba(35, 38, 41, .18);
+}
+
+.profile-hover-card[hidden] {
+  display: none;
+}
+
+.profile-hover-card .info-card {
+  margin: 0 !important;
+  padding: 1rem;
+  font-size: .82rem;
+}
+
+.profile-hover-card .profile-header {
+  margin-bottom: 1rem !important;
+}
+
+.profile-hover-card .profile-avatar,
+.profile-hover-card .profile-avatar img,
+.profile-hover-card .profile-avatar-initials {
+  width: 58px;
+  height: 58px;
+  flex-basis: 58px;
+}
+
+.profile-hover-card .profile-avatar-initials {
+  font-size: 1.5rem;
+}
+
+.profile-hover-card h1 {
+  font-size: 1rem !important;
+}
+
+.profile-hover-card .display-6 {
+  font-size: 1rem;
+  line-height: 1.15;
+}
+
+.profile-hover-card .text-uppercase,
+.profile-hover-card .small,
+.profile-hover-card .form-text {
+  font-size: .68rem !important;
+}
+
+.profile-hover-card .card-body {
+  padding: .55rem;
+}
+
+.profile-hover-card .card-header {
+  padding: .45rem .6rem;
+  font-size: .78rem;
+}
+
+.profile-hover-card .row {
+  --bs-gutter-x: .5rem;
+  --bs-gutter-y: .5rem;
+}
+
+.profile-hover-card .card {
+  border-radius: 4px;
+}
+
+.profile-hover-card .card-header button,
+.profile-hover-card .collapse {
+  display: none;
+}
+
+.profile-hover-card-loading {
+  padding: 1rem;
+  color: #6a737c;
+  font-size: .9rem;
+}
+
 .questions-shell {
   max-width: 980px;
   margin: 0 auto;
