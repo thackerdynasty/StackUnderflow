@@ -82,6 +82,15 @@ public class ProfileController : Controller
             .OrderByDescending(c => c.CreatedAt)
             .ToListAsync();
 
+        var savedThreads = await _dbContext.SavedThreads
+            .AsNoTracking()
+            .Where(s => s.UserId == user.Id)
+            .OrderByDescending(s => s.SavedAt)
+            .Include(s => s.SUThread)
+            .ThenInclude(t => t.User)
+            .Select(s => s.SUThread)
+            .ToListAsync();
+
         return new ProfileViewModel
         {
             User = user,
@@ -89,10 +98,12 @@ public class ProfileController : Controller
             Questions = questions,
             Answers = answers,
             Comments = comments,
+            SavedThreads = savedThreads,
             QuestionCount = questions.Count,
             AnswerCount = answers.Count,
             AcceptedAnswerCount = answers.Count(p => p.IsAcceptedAnswer),
             CommentCount = comments.Count,
+            SavedThreadCount = savedThreads.Count,
         };
     }
 
