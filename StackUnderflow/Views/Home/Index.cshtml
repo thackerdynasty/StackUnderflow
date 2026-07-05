@@ -98,7 +98,8 @@
              hidden="@(totalPages <= 1 ? "hidden" : null)"
              data-current-page="@currentPage"
              data-total-pages="@totalPages"
-             data-page-size="@pageSize">
+             data-page-size="@pageSize"
+             data-search="@ViewData["Query"]">
         </nav>
     }
 </section>

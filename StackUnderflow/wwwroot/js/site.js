@@ -109,9 +109,6 @@ let reapplyActiveQuestionFilter = () => {};
 // Profile hover cards
 // -----------------------------
 function attachProfileCards() {
-    const triggers = Array.from(document.querySelectorAll('[data-profile-card-user-id]'));
-    if (triggers.length === 0) return;
-
     const card = document.createElement('div');
     card.className = 'profile-hover-card';
     card.setAttribute('role', 'dialog');
@@ -194,11 +191,34 @@ function attachProfileCards() {
         }, 180);
     };
 
-    triggers.forEach((trigger) => {
-        trigger.addEventListener('mouseenter', () => showCard(trigger));
-        trigger.addEventListener('focus', () => showCard(trigger));
-        trigger.addEventListener('mouseleave', scheduleHide);
-        trigger.addEventListener('blur', scheduleHide);
+    // Delegate to the document so triggers added later (paginated threads,
+    // "Load more" answers) get hover cards without re-binding listeners.
+    const triggerFrom = (target) =>
+        target instanceof Element ? target.closest('[data-profile-card-user-id]') : null;
+
+    document.addEventListener('mouseover', (event) => {
+        const trigger = triggerFrom(event.target);
+        if (!trigger) return;
+        if (trigger === activeTrigger && !card.hidden) {
+            clearTimeout(hideTimer);
+            return;
+        }
+        showCard(trigger);
+    });
+
+    document.addEventListener('mouseout', (event) => {
+        const trigger = triggerFrom(event.target);
+        if (!trigger || trigger.contains(event.relatedTarget)) return;
+        scheduleHide();
+    });
+
+    document.addEventListener('focusin', (event) => {
+        const trigger = triggerFrom(event.target);
+        if (trigger) showCard(trigger);
+    });
+
+    document.addEventListener('focusout', (event) => {
+        if (triggerFrom(event.target)) scheduleHide();
     });
 
     card.addEventListener('mouseenter', () => clearTimeout(hideTimer));
@@ -313,6 +333,7 @@ function attachThreadPagination() {
     if (!questionList || !nav) return;
 
     const pageSize = Number(nav.dataset.pageSize) || 20;
+    const searchQuery = nav.dataset.search || '';
     const totalPages = Number(nav.dataset.totalPages) || 1;
     let currentPage = Number(nav.dataset.currentPage) || 1;
     let loading = false;
@@ -369,7 +390,7 @@ function attachThreadPagination() {
                 <div class="question-meta">
                     ${thread.isSolved ? '<span class="status-pill">Solved</span>' : ''}
                     <span>asked ${htmlEncode(askedDate)}</span>
-                    <span>by <a href="${profileUrl}"></a></span>
+                    <span>by <a href="${profileUrl}" data-profile-card-user-id="${htmlEncode(String(thread.userId || ''))}"></a></span>
                 </div>
             </div>`;
 
@@ -449,7 +470,8 @@ function attachThreadPagination() {
         renderControls();
 
         try {
-            const response = await fetch(`/api/Thread/paginated?page=${page}&pageSize=${pageSize}`, {
+            const searchParam = searchQuery ? `&search=${encodeURIComponent(searchQuery)}` : '';
+            const response = await fetch(`/api/Thread/paginated?page=${page}&pageSize=${pageSize}${searchParam}`, {
                 headers: { 'Accept': 'application/json' }
             });
             if (!response.ok) throw new Error(`Request failed: ${response.status}`);
