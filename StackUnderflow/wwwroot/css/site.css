@@ -288,7 +288,6 @@ body {
 }
 
 .thread-post {
-  position: relative;
   display: grid;
   grid-template-columns: 56px minmax(0, 1fr);
   gap: 1.1rem;
