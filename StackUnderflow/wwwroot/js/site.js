@@ -100,10 +100,10 @@ document.addEventListener('DOMContentLoaded', function() {
     attachProfileCards();
 });
 
-// Re-applies the currently active home-page filter. Replaced with a real
-// implementation by attachQuestionFilters; pagination calls it after appending
-// freshly loaded cards so they participate in the active filter/sort.
-let reapplyActiveQuestionFilter = () => {};
+// Switches the active home-page filter. Replaced with a real implementation
+// by attachThreadPagination; the filter tabs call it so the server re-sorts
+// the whole dataset instead of just the cards on the current page.
+let setQuestionFilter = () => {};
 
 // -----------------------------
 // Profile hover cards
@@ -246,82 +246,20 @@ function attachQuestionFilters() {
     if (!filterBar || !questionList) return;
 
     const filterButtons = Array.from(filterBar.querySelectorAll('[data-question-filter]'));
-    const emptyState = document.querySelector('.question-filter-empty');
     if (filterButtons.length === 0) return;
-
-    // Read the cards fresh each time so cards appended by "Load More" are included.
-    const getQuestions = () => Array.from(questionList.querySelectorAll('.question-summary'));
-
-    const numberFromData = (question, name) => Number(question.dataset[name]) || 0;
-    const createdAt = (question) => Date.parse(question.dataset.createdAt) || 0;
-    const newestFirst = (left, right) => createdAt(right) - createdAt(left);
-
-    const filters = {
-        new: {
-            includes: () => true,
-            compare: newestFirst
-        },
-        trending: {
-            includes: (question) => numberFromData(question, 'recentAnswers') > 0,
-            compare: (left, right) =>
-                numberFromData(right, 'recentAnswers') - numberFromData(left, 'recentAnswers')
-                || numberFromData(right, 'upvotes') - numberFromData(left, 'upvotes')
-                || newestFirst(left, right)
-        },
-        viewed: {
-            includes: () => true,
-            compare: (left, right) =>
-                numberFromData(right, 'views') - numberFromData(left, 'views')
-                || newestFirst(left, right)
-        },
-        upvoted: {
-            includes: () => true,
-            compare: (left, right) =>
-                numberFromData(right, 'upvotes') - numberFromData(left, 'upvotes')
-                || newestFirst(left, right)
-        }
-    };
-
-    let activeFilterName = 'new';
-
-    const applyFilter = (filterName) => {
-        const selectedFilter = filters[filterName];
-        if (!selectedFilter) return;
-        activeFilterName = filterName;
-
-        const questions = getQuestions();
-        const visibleQuestions = questions.filter(selectedFilter.includes).sort(selectedFilter.compare);
-        const visibleSet = new Set(visibleQuestions);
-
-        questions.forEach((question) => {
-            question.hidden = !visibleSet.has(question);
-        });
-        visibleQuestions.forEach((question) => questionList.appendChild(question));
-
-        if (emptyState) {
-            emptyState.hidden = visibleQuestions.length !== 0;
-        }
-        questionList.hidden = visibleQuestions.length === 0;
-
-        filterButtons.forEach((button) => {
-            const isActive = button.dataset.questionFilter === filterName;
-            button.classList.toggle('active', isActive);
-            button.setAttribute('aria-pressed', String(isActive));
-        });
-    };
 
     filterBar.addEventListener('click', (event) => {
         const button = event.target.closest('[data-question-filter]');
         if (!button || !filterBar.contains(button)) return;
 
-        applyFilter(button.dataset.questionFilter);
+        filterButtons.forEach((other) => {
+            const isActive = other === button;
+            other.classList.toggle('active', isActive);
+            other.setAttribute('aria-pressed', String(isActive));
+        });
+
+        setQuestionFilter(button.dataset.questionFilter);
     });
-
-    // Expose a re-apply hook for the pagination loader.
-    reapplyActiveQuestionFilter = () => applyFilter(activeFilterName);
-
-    const initialFilter = filterButtons.find((button) => button.classList.contains('active'));
-    applyFilter(initialFilter?.dataset.questionFilter || 'new');
 }
 
 // -----------------------------
@@ -334,11 +272,10 @@ function attachThreadPagination() {
 
     const pageSize = Number(nav.dataset.pageSize) || 20;
     const searchQuery = nav.dataset.search || '';
-    const totalPages = Number(nav.dataset.totalPages) || 1;
+    let totalPages = Number(nav.dataset.totalPages) || 1;
     let currentPage = Number(nav.dataset.currentPage) || 1;
+    let activeFilter = 'new';
     let loading = false;
-
-    if (totalPages <= 1) return;
 
     const buildCard = (thread) => {
         const score = (thread.upvoteCount || 0) - (thread.downvoteCount || 0);
@@ -463,15 +400,16 @@ function attachThreadPagination() {
         }));
     };
 
-    const goToPage = async (page) => {
-        if (loading || page === currentPage || page < 1 || page > totalPages) return;
+    const goToPage = async (page, { force = false } = {}) => {
+        if (loading || (!force && page === currentPage) || page < 1 || (!force && page > totalPages)) return;
         loading = true;
         nav.classList.add('loading');
         renderControls();
 
         try {
             const searchParam = searchQuery ? `&search=${encodeURIComponent(searchQuery)}` : '';
-            const response = await fetch(`/api/Thread/paginated?page=${page}&pageSize=${pageSize}${searchParam}`, {
+            const filterParam = activeFilter !== 'new' ? `&filter=${encodeURIComponent(activeFilter)}` : '';
+            const response = await fetch(`/api/Thread/paginated?page=${page}&pageSize=${pageSize}${searchParam}${filterParam}`, {
                 headers: { 'Accept': 'application/json' }
             });
             if (!response.ok) throw new Error(`Request failed: ${response.status}`);
@@ -481,13 +419,19 @@ function attachThreadPagination() {
             questionList.replaceChildren(...threads.map(buildCard));
 
             currentPage = result.currentPage || page;
+            totalPages = result.totalPages || 1;
             nav.dataset.currentPage = String(currentPage);
+            nav.dataset.totalPages = String(totalPages);
+            nav.hidden = totalPages <= 1;
 
-            // Let the freshly rendered cards participate in the active filter/sort.
-            reapplyActiveQuestionFilter();
+            const emptyState = document.querySelector('.question-filter-empty');
+            if (emptyState) emptyState.hidden = threads.length !== 0;
+            questionList.hidden = threads.length === 0;
 
-            const shell = document.querySelector('.questions-shell');
-            if (shell) shell.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            if (!force) {
+                const shell = document.querySelector('.questions-shell');
+                if (shell) shell.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
         } catch (error) {
             console.error('Failed to load page', error);
         } finally {
@@ -495,6 +439,13 @@ function attachThreadPagination() {
             nav.classList.remove('loading');
             renderControls();
         }
+    };
+
+    // Filter tabs re-query the server so sorting spans every page, not just
+    // the cards currently rendered.
+    setQuestionFilter = (filterName) => {
+        activeFilter = filterName || 'new';
+        goToPage(1, { force: true });
     };
 
     renderControls();

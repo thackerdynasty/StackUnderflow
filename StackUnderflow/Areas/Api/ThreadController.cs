@@ -28,7 +28,8 @@ public class ThreadController : ControllerBase
     [HttpGet("paginated")]
     public async Task<ActionResult<PaginatedResponse<ThreadSummaryDto>>> GetSUThreadsPaginated(
         [FromQuery] PaginationRequest pagination,
-        [FromQuery] string? search = null)
+        [FromQuery] string? search = null,
+        [FromQuery] string? filter = null)
     {
         if (!ModelState.IsValid)
         {
@@ -43,10 +44,31 @@ public class ThreadController : ControllerBase
             threads = threads.Where(t => t.Title.Contains(search) || t.Content.Contains(search));
         }
 
-        var query = threads
-            // Newest first; Id as a stable tiebreak so pages don't overlap or skip.
-            .OrderByDescending(t => t.CreatedAt)
-            .ThenByDescending(t => t.Id)
+        // Mirrors the home-page filter tabs; Id as a stable tiebreak so pages
+        // don't overlap or skip.
+        var ordered = filter switch
+        {
+            "trending" => threads
+                .Where(t => t.Posts.Any(post => post.CreatedAt >= recentCutoff))
+                .OrderByDescending(t => t.Posts.Count(post => post.CreatedAt >= recentCutoff))
+                .ThenByDescending(t => t.UpvoteCount - t.DownvoteCount)
+                .ThenByDescending(t => t.CreatedAt)
+                .ThenByDescending(t => t.Id),
+            "viewed" => threads
+                .OrderByDescending(t => t.ViewCount)
+                .ThenByDescending(t => t.CreatedAt)
+                .ThenByDescending(t => t.Id),
+            // Sort by net score (up - down) to match the "votes" number shown on each card.
+            "upvoted" => threads
+                .OrderByDescending(t => t.UpvoteCount - t.DownvoteCount)
+                .ThenByDescending(t => t.CreatedAt)
+                .ThenByDescending(t => t.Id),
+            _ => threads
+                .OrderByDescending(t => t.CreatedAt)
+                .ThenByDescending(t => t.Id)
+        };
+
+        var query = ordered
             .Select(t => new ThreadSummaryDto
             {
                 Id = t.Id,
