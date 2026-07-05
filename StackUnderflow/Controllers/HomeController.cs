@@ -41,6 +41,11 @@ public class HomeController : Controller
     [HttpPost]
     public IActionResult Index(string query)
     {
+        if (string.IsNullOrEmpty(query))
+        {
+            return RedirectToAction("Index");
+        }
+        
         var threads = _context.SUThreads
             .Where(t => t.Title.Contains(query) || t.Content.Contains(query))
             .Include(t => t.User)
