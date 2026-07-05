@@ -25,43 +25,47 @@ public static class DatabaseSeeder
     private static readonly ThreadSeed[] Threads =
     [
         new("How do I seed an EF Core database on startup?", "I want local data every time the app starts in Development. Is this pattern okay?\n\n```csharp\nusing var scope = app.Services.CreateScope();\nawait DatabaseSeeder.SeedAsync(scope.ServiceProvider);\n```"),
-        new("Why does my Razor view show encoded HTML instead of code blocks?", "My parser returns HTML for fenced snippets, but the page prints the tags.\n\n```csharp\nreturn $\"<pre><code>{encoded}</code></pre>\";\n```"),
+        new("Why does my Razor view show encoded HTML instead of code blocks?", "My parser returns HTML for fenced snippets, but the page prints the tags. I am trying to understand whether this belongs in the parser or in the Razor view."),
         new("How should I sort accepted answers before high score answers?", "I need accepted answers first, then score, then oldest.\n\n```csharp\nposts.OrderByDescending(p => p.IsAcceptedAnswer)\n     .ThenByDescending(p => p.Upvotes - p.Downvotes)\n     .ThenBy(p => p.CreatedAt);\n```"),
-        new("Bootstrap card grid looks cramped inside a hover popup", "The full profile card works, but the popup needs smaller stats.\n\n```css\n.profile-hover-card .display-6 {\n  font-size: 1rem;\n}\n```"),
+        new("Bootstrap card grid looks cramped inside a hover popup", "The full profile card works, but the popup needs smaller stats, tighter labels, and less padding. The page version should stay unchanged."),
         new("How do I prevent users from voting on their own posts?", "My controller disables the button in Razor, but I want the server to enforce it too.\n\n```csharp\nif (post.UserId == userId) return Forbid();\n```"),
-        new("Entity Framework navigation collection is null after seeding", "I add comments to a post during seeding, then a view reads a null collection.\n\n```csharp\nComments = new List<Comment>()\n```"),
+        new("Entity Framework navigation collection is null after seeding", "I add comments to a post during seeding, then a view reads a null collection. Is it better to initialize collections in the model or every time I create seed objects?"),
         new("What is the cleanest route for a profile hover card partial?", "I want a username hover to fetch HTML from MVC and reuse the existing partial.\n\n```js\nfetch(`/Profile/InfoCard/${userId}`)\n```"),
-        new("Why is my localhost page connection refused in VS Code?", "The browser opens port 8080, but ASP.NET says it is listening on 5142.\n\n```json\n\"ASPNETCORE_URLS\": \"http://localhost:5142\"\n```"),
+        new("Why is my localhost page connection refused in VS Code?", "The browser opens port 8080, but ASP.NET says it is listening on 5142. I switched branches and now the launch profile seems out of sync."),
         new("How do I make comments render under each answer?", "I include comments on posts but the UI sometimes shows them out of order.\n\n```csharp\npost.Comments.OrderBy(c => c.CreatedAt)\n```"),
         new("Can I use triple backticks in a textarea preview?", "I want users to type markdown-like code fences and see a preview.\n\n```js\nconst fenceRegex = /```([\\s\\S]*?)```/g;\n```"),
-        new("How should reputation update when an answer is accepted?", "Accepted answer reputation and thread owner reputation should both change.\n\n```csharp\npost.User.Reputation += 15;\nthread.User.Reputation += 2;\n```"),
+        new("How should reputation update when an answer is accepted?", "Accepted answer reputation and thread owner reputation should both change, but I am unsure whether to calculate it live or store the value."),
         new("Why does my Identity user have null custom fields?", "I added Bio and ProfilePicture to User but old users have empty values.\n\n```csharp\npublic string Bio { get; set; }\npublic Uri ProfilePicture { get; set; }\n```"),
-        new("How do I keep a hover card visible while moving the mouse?", "The card disappears between the link and popup unless I delay hiding it.\n\n```js\nhideTimer = setTimeout(hideCard, 180);\n```"),
+        new("How do I keep a hover card visible while moving the mouse?", "The card disappears between the link and popup unless I delay hiding it. I want it to feel forgiving without sticking around forever."),
         new("Should API update endpoints accept null values?", "My DTO treats null as leave unchanged. Is that okay for profile fields?\n\n```csharp\nif (dto.Bio is not null) user.Bio = dto.Bio;\n```"),
-        new("How do I show initials when an avatar image fails?", "I want a fallback if the profile image URL cannot load.\n\n```html\n<img onerror=\"this.style.display='none'\" />\n```"),
+        new("How do I show initials when an avatar image fails?", "I want a fallback if the profile image URL cannot load, preferably without needing a second request or a placeholder image."),
         new("Why does dotnet build fail while debugging?", "The debugger locks the DLL and the compiler cannot copy the new one.\n\n```powershell\ndotnet build -p:OutDir=C:\\tmp\\build\\\n```"),
-        new("What should be included in a StackOverflow-like question summary?", "I need votes, answers, views, solved status, title, excerpt, and author.\n\n```html\n<article class=\"question-summary\">...</article>\n```"),
+        new("What should be included in a StackOverflow-like question summary?", "I need votes, answers, views, solved status, title, excerpt, and author. I am trying to keep it dense but still readable."),
         new("How do I add a live preview for answer edits?", "I have preview working for new answers, but edit forms are generated per post.\n\n```js\nattachLivePreview('#post-edit-42', '#post-edit-preview-42');\n```"),
-        new("How can I keep seeded view counts realistic?", "The homepage looks fake when every question has 42 views.\n\n```csharp\nViewCount = 35 + upvotes * 40 + posts * 24 + comments * 18;\n```"),
+        new("How can I keep seeded view counts realistic?", "The homepage looks fake when every question has 42 views. I want view counts to roughly follow activity without needing random data."),
         new("How should I validate email on an API DTO?", "I want basic validation without exposing Identity internals.\n\n```csharp\n[EmailAddress]\npublic string? Email { get; set; }\n```"),
-        new("How do I make answer sorting preserve accepted answers?", "When users choose newest, accepted answers should still stay first.\n\n```js\nacceptedFirst(left, right) || createdAt(right) - createdAt(left)\n```"),
+        new("How do I make answer sorting preserve accepted answers?", "When users choose newest, accepted answers should still stay first. The accepted answer should not jump into the middle of the list."),
         new("What is the safest way to delete a user in a demo API?", "The route works, but relationships and permissions make me nervous.\n\n```csharp\n_dbContext.Users.Remove(user);\nawait _dbContext.SaveChangesAsync();\n```"),
-        new("How can I render code fences without allowing script tags?", "I want code blocks, not arbitrary HTML injection.\n\n```csharp\nWebUtility.HtmlEncode(code)\n```"),
-        new("How do I make profile-card data feel populated?", "A card with reputation but no answers or comments feels empty.\n\n```csharp\nQuestionCount = questions.Count;\nAnswerCount = answers.Count;\nCommentCount = comments.Count;\n```"),
+        new("How can I render code fences without allowing script tags?", "I want code blocks, not arbitrary HTML injection. What is the safest way to turn user text into a rendered post?"),
+        new("How do I make profile-card data feel populated?", "A card with reputation but no answers or comments feels empty. I want seeded data that exercises profile summaries, hover cards, accepted answers, and comments."),
     ];
 
     private static readonly string[] AnswerTemplates =
     [
         "Start by making the behavior explicit and keeping the controller small.\n\n```csharp\nif (model is null) return NotFound();\nreturn View(model);\n```",
-        "I would put this behind a helper so the view stays readable.\n\n```csharp\nprivate static int Score(int up, int down) => up - down;\n```",
+        "I would put this behind a helper so the view stays readable. The controller should describe the workflow, not every tiny formatting decision.",
         "The important part is to query only the data the view needs.\n\n```csharp\n.AsNoTracking()\n.Include(x => x.User)\n.ToListAsync();\n```",
-        "This is a good place for a tiny client-side enhancement.\n\n```js\ndocument.querySelectorAll('[data-profile-card-user-id]')\n  .forEach(link => link.addEventListener('mouseenter', showCard));\n```",
+        "This is a good place for a tiny client-side enhancement. Keep the HTML usable first, then add hover behavior on top of normal profile links.",
         "Make sure the seeded objects have both the foreign key and navigation where useful.\n\n```csharp\npost.SUThread = thread;\npost.UserId = answerAuthor.Id;\n```",
-        "For UI polish, clamp the popup position to the viewport.\n\n```js\nleft = Math.max(10, Math.min(left, window.innerWidth - width - 10));\n```",
+        "For UI polish, clamp the popup position to the viewport. That prevents it from disappearing off the right side on narrower screens.",
         "I usually verify this with a small known input first.\n\n```csharp\nvar input = \"```\\nprint(\\\"hello world\\\")\\n```\";\n```",
-        "If this is for Development seeding, make it deterministic instead of random.\n\n```csharp\nvar postCount = index % 10 + 1;\n```",
+        "If this is for Development seeding, make it deterministic instead of random. Repeatable data makes screenshots and debugging much easier.",
         "Do not rely only on disabled buttons. Keep the server check.\n\n```csharp\nif (entity.UserId == currentUserId) return Forbid();\n```",
-        "The route can return partial HTML as long as the caller treats it as trusted server-rendered markup.\n\n```csharp\nreturn PartialView(\"~/Views/_InfoCard.cshtml\", model);\n```",
+        "The route can return partial HTML as long as the caller treats it as trusted server-rendered markup.",
+        "For this case, I would keep the API DTO and the page view model separate. They serve different shapes of data.",
+        "A little sample data variety goes a long way here: unsolved questions, quiet posts, busy comment threads, and a few accepted answers.",
+        "You can make the profile card feel more real by spreading answers and comments across different seeded users.",
+        "If the rendered page feels noisy, reduce the card chrome before removing useful data.",
     ];
 
     private static readonly string[] CommentTemplates =
@@ -74,7 +78,15 @@ public static class DatabaseSeeder
         "Watch out for null navigation collections here.",
         "The view count formula makes the homepage feel less flat.",
         "This is also useful for testing the profile hover card.",
+        "I hit the same thing after switching branches.",
+        "This should probably be covered by the seed data.",
+        "The accepted-answer ordering is the part I missed.",
+        "Nice, this keeps the profile page and hover card in sync.",
+        "I would leave the plain-text examples too so the parser is not the only thing being tested.",
+        "This makes the home page feel much less artificial.",
     ];
+
+    private static readonly int[] CommentPattern = [0, 3, 1, 5, 0, 2, 4, 1, 0, 2, 5, 0, 3, 1, 4, 0];
 
     public static async Task SeedAsync(
         IServiceProvider services,
@@ -190,9 +202,9 @@ public static class DatabaseSeeder
                     });
                 }
 
-                var commentsForPost = (threadIndex + postIndex) % 3 == 0
-                    ? 2
-                    : (threadIndex + postIndex) % 4 == 0 ? 1 : 0;
+                var commentsForPost = threadIndex == Threads.Length - 1
+                    ? 0
+                    : CommentPattern[(threadIndex * 3 + postIndex) % CommentPattern.Length];
 
                 for (var commentIndex = 0; commentIndex < commentsForPost; commentIndex++)
                 {
