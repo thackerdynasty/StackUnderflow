@@ -152,6 +152,9 @@ public class ThreadController : Controller
                 ViewBag.AnswerVotes = _context.PostVotes
                     .Where(v => v.UserId == userId && v.Post.SUThreadId == id)
                     .ToDictionary(v => v.PostId, v => v.Value);
+
+                ViewBag.IsSaved = _context.SavedThreads
+                    .Any(s => s.UserId == userId && s.SUThreadId == id);
             }
 
             if (userId != thread.UserId)

@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using StackUnderflow.Data;
 
@@ -11,9 +12,11 @@ using StackUnderflow.Data;
 namespace StackUnderflow.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260607194953_AddSavedThreads")]
+    partial class AddSavedThreads
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -190,7 +193,7 @@ namespace StackUnderflow.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("Comments", (string)null);
+                    b.ToTable("Comments");
                 });
 
             modelBuilder.Entity("StackUnderflow.Models.Post", b =>
@@ -233,7 +236,7 @@ namespace StackUnderflow.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("Posts", (string)null);
+                    b.ToTable("Posts");
                 });
 
             modelBuilder.Entity("StackUnderflow.Models.PostVote", b =>
@@ -267,7 +270,7 @@ namespace StackUnderflow.Migrations
                     b.HasIndex("UserId", "PostId")
                         .IsUnique();
 
-                    b.ToTable("PostVotes", (string)null);
+                    b.ToTable("PostVotes");
                 });
 
             modelBuilder.Entity("StackUnderflow.Models.SUThread", b =>
@@ -312,7 +315,7 @@ namespace StackUnderflow.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("SUThreads", (string)null);
+                    b.ToTable("SUThreads");
                 });
 
             modelBuilder.Entity("StackUnderflow.Models.SavedThread", b =>
@@ -340,7 +343,7 @@ namespace StackUnderflow.Migrations
                     b.HasIndex("UserId", "SUThreadId")
                         .IsUnique();
 
-                    b.ToTable("SavedThreads", (string)null);
+                    b.ToTable("SavedThreads");
                 });
 
             modelBuilder.Entity("StackUnderflow.Models.ThreadVote", b =>
@@ -374,7 +377,7 @@ namespace StackUnderflow.Migrations
                     b.HasIndex("UserId", "SUThreadId")
                         .IsUnique();
 
-                    b.ToTable("ThreadVotes", (string)null);
+                    b.ToTable("ThreadVotes");
                 });
 
             modelBuilder.Entity("StackUnderflow.Models.User", b =>

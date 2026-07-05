@@ -97,12 +97,125 @@ document.addEventListener('DOMContentLoaded', function() {
     attachThreadPagination();
     attachAnswerSort();
     attachAnswerPagination();
+    attachProfileCards();
 });
 
 // Re-applies the currently active home-page filter. Replaced with a real
 // implementation by attachQuestionFilters; pagination calls it after appending
 // freshly loaded cards so they participate in the active filter/sort.
 let reapplyActiveQuestionFilter = () => {};
+
+// -----------------------------
+// Profile hover cards
+// -----------------------------
+function attachProfileCards() {
+    const triggers = Array.from(document.querySelectorAll('[data-profile-card-user-id]'));
+    if (triggers.length === 0) return;
+
+    const card = document.createElement('div');
+    card.className = 'profile-hover-card';
+    card.setAttribute('role', 'dialog');
+    card.setAttribute('aria-label', 'Profile card');
+    card.hidden = true;
+    document.body.appendChild(card);
+
+    const cache = new Map();
+    let activeTrigger = null;
+    let hideTimer = null;
+    let requestId = 0;
+
+    const positionCard = (trigger) => {
+        const margin = 10;
+        const rect = trigger.getBoundingClientRect();
+        const cardRect = card.getBoundingClientRect();
+        const viewportWidth = document.documentElement.clientWidth;
+        const viewportHeight = document.documentElement.clientHeight;
+
+        let left = rect.right + margin;
+        let top = rect.top;
+
+        if (left + cardRect.width + margin > viewportWidth) {
+            left = rect.left - cardRect.width - margin;
+        }
+
+        left = Math.max(margin, Math.min(left, viewportWidth - cardRect.width - margin));
+        top = Math.max(margin, Math.min(top, viewportHeight - cardRect.height - margin));
+
+        card.style.left = `${left}px`;
+        card.style.top = `${top}px`;
+    };
+
+    const showCard = async (trigger) => {
+        const userId = trigger.dataset.profileCardUserId;
+        if (!userId) return;
+
+        activeTrigger = trigger;
+        clearTimeout(hideTimer);
+        const currentRequest = ++requestId;
+
+        card.hidden = false;
+        card.classList.add('is-loading');
+        card.innerHTML = '<div class="profile-hover-card-loading">Loading profile...</div>';
+        positionCard(trigger);
+
+        try {
+            if (!cache.has(userId)) {
+                const response = await fetch(`/Profile/InfoCard/${encodeURIComponent(userId)}`, {
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                });
+
+                if (!response.ok) {
+                    throw new Error('Profile card request failed.');
+                }
+
+                cache.set(userId, await response.text());
+            }
+
+            if (currentRequest !== requestId || activeTrigger !== trigger) return;
+
+            card.classList.remove('is-loading');
+            card.innerHTML = cache.get(userId);
+            positionCard(trigger);
+        } catch {
+            if (currentRequest !== requestId || activeTrigger !== trigger) return;
+
+            card.classList.remove('is-loading');
+            card.innerHTML = '<div class="profile-hover-card-loading">Profile unavailable.</div>';
+            positionCard(trigger);
+        }
+    };
+
+    const scheduleHide = () => {
+        clearTimeout(hideTimer);
+        hideTimer = setTimeout(() => {
+            activeTrigger = null;
+            card.hidden = true;
+            card.innerHTML = '';
+        }, 180);
+    };
+
+    triggers.forEach((trigger) => {
+        trigger.addEventListener('mouseenter', () => showCard(trigger));
+        trigger.addEventListener('focus', () => showCard(trigger));
+        trigger.addEventListener('mouseleave', scheduleHide);
+        trigger.addEventListener('blur', scheduleHide);
+    });
+
+    card.addEventListener('mouseenter', () => clearTimeout(hideTimer));
+    card.addEventListener('mouseleave', scheduleHide);
+
+    window.addEventListener('scroll', () => {
+        if (!card.hidden && activeTrigger) {
+            positionCard(activeTrigger);
+        }
+    }, { passive: true });
+
+    window.addEventListener('resize', () => {
+        if (!card.hidden && activeTrigger) {
+            positionCard(activeTrigger);
+        }
+    });
+}
 
 // -----------------------------
 // Home page question filters

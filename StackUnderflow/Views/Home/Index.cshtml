@@ -82,7 +82,7 @@
                                 <span class="status-pill">Solved</span>
                             }
                             <span>asked @thread.CreatedAt.ToString("MMM d, yyyy")</span>
-                            <span>by <a asp-controller="Profile" asp-action="Details" asp-route-id="@thread.UserId">@authorName</a></span>
+                            <span>by <a asp-controller="Profile" asp-action="Details" asp-route-id="@thread.UserId" data-profile-card-user-id="@thread.UserId">@authorName</a></span>
                         </div>
                     </div>
                 </article>
