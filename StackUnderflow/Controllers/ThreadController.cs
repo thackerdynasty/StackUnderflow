@@ -44,8 +44,9 @@ public class ThreadController(ApplicationDbContext context) : Controller
     [Authorize]
     [HttpPost]
     [Route("/Thread/Create")]
-    public IActionResult Create(string title, string content, string tags)
+    public IActionResult Create(string title, string content, string threadTags)
     {
+        System.Diagnostics.Debug.WriteLine($"Creating thread with title: {title}, content: {content}, tags: {threadTags}");
         if (string.IsNullOrWhiteSpace(title) || string.IsNullOrWhiteSpace(content))
         {
             TempData["Error"] = "Title and content are required.";
@@ -64,7 +65,7 @@ public class ThreadController(ApplicationDbContext context) : Controller
             UserId = User.FindFirst(ClaimTypes.NameIdentifier)!.Value,
             Posts = new List<Post>(),
         };
-        ApplyTags(thread, tags);
+        ApplyTags(thread, threadTags);
         _context.SUThreads.Add(thread);
         _context.SaveChanges();
         return RedirectToAction(nameof(Detail), new { id = thread.Id });
@@ -75,6 +76,7 @@ public class ThreadController(ApplicationDbContext context) : Controller
     {
         var thread = _context.SUThreads
             .Include(t => t.ThreadTags)
+            .ThenInclude(tt => tt.Tag)
             .FirstOrDefault(t => t.Id == id);
         if (thread == null)
             return NotFound();
@@ -86,7 +88,7 @@ public class ThreadController(ApplicationDbContext context) : Controller
     [Authorize]
     [HttpPost]
     [Route("/Thread/{id}/Edit")]
-    public IActionResult Edit(int id, string title, string content, string tags)
+    public IActionResult Edit(int id, string title, string content, string threadTags)
     {
         var thread = _context.SUThreads
             .Include(t => t.ThreadTags)
@@ -105,7 +107,7 @@ public class ThreadController(ApplicationDbContext context) : Controller
         thread.Content = content.Trim();
         thread.UpdatedAt = DateTime.UtcNow;
         thread.ThreadTags.Clear();
-        ApplyTags(thread, tags);
+        ApplyTags(thread, threadTags);
 
         _context.SaveChanges();
 
