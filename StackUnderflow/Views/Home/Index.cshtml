@@ -23,20 +23,6 @@
         </div>
         <a asp-controller="Thread" asp-action="Create" class="btn btn-primary ask-button">Ask Question</a>
     </div>
-    
-    <div class="question-toolbar">
-        <div class="question-search">
-            <form method="post">
-                <input name="query" value="@ViewData["query"]" placeholder="Search..."/>
-            </form>
-        </div>
-        <div class="question-tabs" aria-label="Question filters">
-            <button type="button" class="question-tab active" data-question-filter="new" aria-pressed="true">New</button>
-            <button type="button" class="question-tab" data-question-filter="trending" aria-pressed="false">Trending</button>
-            <button type="button" class="question-tab" data-question-filter="viewed" aria-pressed="false">Most Viewed</button>
-            <button type="button" class="question-tab" data-question-filter="upvoted" aria-pressed="false">Most Upvoted</button>
-        </div>
-    </div>
 
     @if (Model.TopUsers.Count > 0)
     {
@@ -63,12 +49,19 @@
             </ol>
         </section>
     }
-
-    <div class="question-tabs" aria-label="Question filters">
-        <button type="button" class="question-tab active" data-question-filter="new" aria-pressed="true">New</button>
-        <button type="button" class="question-tab" data-question-filter="trending" aria-pressed="false">Trending</button>
-        <button type="button" class="question-tab" data-question-filter="viewed" aria-pressed="false">Most Viewed</button>
-        <button type="button" class="question-tab" data-question-filter="upvoted" aria-pressed="false">Most Upvoted</button>
+    
+    <div class="question-toolbar">
+        <div class="question-search">
+            <form method="post">
+                <input name="query" value="@ViewData["query"]" placeholder="Search..."/>
+            </form>
+        </div>
+        <div class="question-tabs" aria-label="Question filters">
+            <button type="button" class="question-tab active" data-question-filter="new" aria-pressed="true">New</button>
+            <button type="button" class="question-tab" data-question-filter="trending" aria-pressed="false">Trending</button>
+            <button type="button" class="question-tab" data-question-filter="viewed" aria-pressed="false">Most Viewed</button>
+            <button type="button" class="question-tab" data-question-filter="upvoted" aria-pressed="false">Most Upvoted</button>
+        </div>
     </div>
 
     @if (Model.Threads.Count == 0)
