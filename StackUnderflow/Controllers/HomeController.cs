@@ -35,7 +35,17 @@ public class HomeController : Controller
         ViewData["CurrentPage"] = 1;
         ViewData["TotalPages"] = (int)Math.Ceiling((double)totalCount / PageSize);
 
-        return View(threads);
+        List<User> topUsers = _context.Users
+            .OrderByDescending(u => u.Reputation)
+            .ThenBy(u => u.UserName)
+            .Take(3)
+            .ToList();
+
+        return View(new HomeViewModel
+        {
+            Threads = threads,
+            TopUsers = topUsers
+        });
     }
 
     [HttpPost]
@@ -65,7 +75,17 @@ public class HomeController : Controller
 
         ViewData["Query"] = query;
 
-        return View(threads);
+        List<User> topUsers = _context.Users
+            .OrderByDescending(u => u.Reputation)
+            .ThenBy(u => u.UserName)
+            .Take(3)
+            .ToList();
+
+        return View(new HomeViewModel
+        {
+            Threads = threads,
+            TopUsers = topUsers
+        });
     }
 
     public IActionResult Privacy()
