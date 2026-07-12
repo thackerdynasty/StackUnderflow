@@ -65,6 +65,15 @@
                             <a asp-controller="Thread" asp-action="Detail" asp-route-id="@thread.Id">@thread.Title</a>
                         </h2>
                         <p>@excerpt</p>
+                        @if (thread.ThreadTags?.Count > 0)
+                        {
+                            <div class="question-tags">
+                                @foreach (var threadTag in thread.ThreadTags)
+                                {
+                                    <span class="badge bg-secondary">@threadTag.Tag?.Name</span>
+                                }
+                            </div>
+                        }
                         <div class="question-meta">
                             @if (thread.IsSolved)
                             {

@@ -4,6 +4,8 @@ namespace StackUnderflow.Models;
 
 public class ThreadTag
 {
+    [Key]
+    public int Id { get; set; }
     public int SUThreadId { get; set; }
     public SUThread SUThread { get; set; } = null!;
 

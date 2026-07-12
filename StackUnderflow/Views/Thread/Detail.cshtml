@@ -46,6 +46,12 @@
                 <span>Modified @Model.UpdatedAt.ToString("MMM d, yyyy")</span>
                 <span>Viewed @Model.ViewCount @(Model.ViewCount == 1 ? "time" : "times")</span>
             </div>
+            <div class="thread-tags">
+                @foreach (var threadTag in Model.ThreadTags ?? Array.Empty<ThreadTag>())
+                {
+                    <span class="badge bg-secondary">@threadTag.Tag?.Name</span>
+                }
+            </div>
         </div>
     </header>
 

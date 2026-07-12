@@ -50,6 +50,35 @@ public static class DatabaseSeeder
         new("How do I make profile-card data feel populated?", "A card with reputation but no answers or comments feels empty. I want seeded data that exercises profile summaries, hover cards, accepted answers, and comments."),
     ];
 
+    // Topical tags for each thread, parallel to the Threads array above.
+    private static readonly string[][] ThreadTagNames =
+    [
+        ["ef-core", "seeding"],
+        ["razor", "markdown"],
+        ["ef-core", "c#"],
+        ["bootstrap", "css"],
+        ["security", "voting"],
+        ["ef-core", "seeding"],
+        ["asp.net-core", "javascript"],
+        ["debugging", "asp.net-core"],
+        ["razor", "ef-core"],
+        ["javascript", "markdown"],
+        ["reputation", "c#"],
+        ["identity", "ef-core"],
+        ["javascript", "css"],
+        ["api", "validation"],
+        ["css", "javascript"],
+        ["debugging", "dotnet"],
+        ["razor", "ui"],
+        ["javascript", "razor"],
+        ["seeding", "c#"],
+        ["api", "validation"],
+        ["c#", "ef-core"],
+        ["api", "security"],
+        ["security", "markdown"],
+        ["seeding", "ui"],
+    ];
+
     private static readonly string[] AnswerTemplates =
     [
         "Start by making the behavior explicit and keeping the controller small.\n\n```csharp\nif (model is null) return NotFound();\nreturn View(model);\n```",
@@ -124,6 +153,8 @@ public static class DatabaseSeeder
         {
             return;
         }
+
+        var tagLookup = new Dictionary<string, Tag>();
 
         for (var threadIndex = 0; threadIndex < Threads.Length; threadIndex++)
         {
@@ -223,6 +254,17 @@ public static class DatabaseSeeder
                 }
 
                 thread.Posts.Add(post);
+            }
+
+            foreach (var tagName in ThreadTagNames[threadIndex])
+            {
+                if (!tagLookup.TryGetValue(tagName, out var tag))
+                {
+                    tag = new Tag { Name = tagName };
+                    tagLookup[tagName] = tag;
+                }
+
+                thread.ThreadTags.Add(new ThreadTag { Tag = tag, SUThread = thread });
             }
 
             thread.ViewCount = 35 + upvotes * 40 + postCount * 24 + commentCount * 18 + threadIndex * 11;

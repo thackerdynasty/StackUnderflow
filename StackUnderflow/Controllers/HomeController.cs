@@ -15,6 +15,8 @@ public class HomeController(ApplicationDbContext context) : Controller
         List<SUThread> threads = _context.SUThreads
             .Include(t => t.User)
             .Include(t => t.Posts)
+            .Include(t => t.ThreadTags)
+            .ThenInclude(tt => tt.Tag)
             .OrderByDescending(t => t.UpvoteCount)
             .Take(10)
             .ToList();

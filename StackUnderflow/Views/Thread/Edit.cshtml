@@ -34,6 +34,12 @@
                             <div id="thread-preview" class="card card-body" style="min-height: 6rem; white-space: pre-wrap;"></div>
                         </div>
 
+                        <div class="mb-3">
+                            <label asp-for="ThreadTags" class="form-label">Tags (comma-separated)</label>
+                            <input asp-for="ThreadTags" class="form-control" />
+                            <span asp-validation-for="ThreadTags" class="text-danger"></span>
+                        </div>
+
                         <div class="d-flex justify-content-between align-items-center" style="margin-top: 15px;">
                             <div>
                                 <button type="submit" class="btn btn-primary">Save changes</button>

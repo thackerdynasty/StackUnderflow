@@ -7,15 +7,28 @@ using System.Security.Claims;
 
 namespace StackUnderflow.Controllers;
 
-public class ThreadController : Controller
+public class ThreadController(ApplicationDbContext context) : Controller
 {
-    private readonly ApplicationDbContext _context;
-    
-    public ThreadController(ApplicationDbContext context)
+
+    private readonly ApplicationDbContext _context = context;
+
+    private void ApplyTags(SUThread thread, string tags)
     {
-        _context = context;
+        var names = (tags ?? "")
+            .Split([',', ' '], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Select(n => n.ToLowerInvariant())
+            .Distinct()
+            .Take(5)
+            .ToList();
+
+        foreach (var name in names)
+        {
+            var tag = _context.Tags.FirstOrDefault(t => t.Name == name)
+                    ?? new Tag { Name = name };
+            thread.ThreadTags.Add(new ThreadTag { Tag = tag });
+        }
     }
-    
+
     // GET
     public IActionResult Index()
     {
@@ -31,7 +44,7 @@ public class ThreadController : Controller
     [Authorize]
     [HttpPost]
     [Route("/Thread/Create")]
-    public IActionResult Create(string title, string content)
+    public IActionResult Create(string title, string content, string tags)
     {
         if (string.IsNullOrWhiteSpace(title) || string.IsNullOrWhiteSpace(content))
         {
@@ -49,8 +62,9 @@ public class ThreadController : Controller
             ViewCount = 0,
             IsSolved = false,
             UserId = User.FindFirst(ClaimTypes.NameIdentifier)!.Value,
-            Posts = new List<Post>()
+            Posts = new List<Post>(),
         };
+        ApplyTags(thread, tags);
         _context.SUThreads.Add(thread);
         _context.SaveChanges();
         return RedirectToAction(nameof(Detail), new { id = thread.Id });
@@ -59,7 +73,9 @@ public class ThreadController : Controller
     [Route("/Thread/{id}/Edit")]
     public IActionResult Edit(int id)
     {
-        var thread = _context.SUThreads.FirstOrDefault(t => t.Id == id);
+        var thread = _context.SUThreads
+            .Include(t => t.ThreadTags)
+            .FirstOrDefault(t => t.Id == id);
         if (thread == null)
             return NotFound();
         if (thread.UserId != User.FindFirst(ClaimTypes.NameIdentifier)?.Value)
@@ -70,9 +86,12 @@ public class ThreadController : Controller
     [Authorize]
     [HttpPost]
     [Route("/Thread/{id}/Edit")]
-    public IActionResult Edit(int id, string title, string content)
+    public IActionResult Edit(int id, string title, string content, string tags)
     {
-        var thread = _context.SUThreads.FirstOrDefault(t => t.Id == id);
+        var thread = _context.SUThreads
+            .Include(t => t.ThreadTags)
+            .ThenInclude(tt => tt.Tag)
+            .FirstOrDefault(t => t.Id == id);
         if (thread == null)
             return NotFound();
         if (thread.UserId != User.FindFirst(ClaimTypes.NameIdentifier)?.Value)
@@ -85,6 +104,8 @@ public class ThreadController : Controller
         thread.Title = title.Trim();
         thread.Content = content.Trim();
         thread.UpdatedAt = DateTime.UtcNow;
+        thread.ThreadTags.Clear();
+        ApplyTags(thread, tags);
 
         _context.SaveChanges();
 
@@ -127,6 +148,8 @@ public class ThreadController : Controller
             .Include(t => t.Posts)
             .ThenInclude(p => p.Comments)
             .ThenInclude(c => c.User)
+            .Include(t => t.ThreadTags)
+            .ThenInclude(tt => tt.Tag)
             .FirstOrDefault(t => t.Id == id);
         
         if (thread == null)
