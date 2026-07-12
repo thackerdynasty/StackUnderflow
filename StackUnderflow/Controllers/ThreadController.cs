@@ -117,18 +117,25 @@ public class ThreadController : Controller
         return Redirect("/");
     }
 
+    private const int AnswersPageSize = 5;
+
+    // Answers ordered for display: accepted first, then by score, then oldest.
+    // Id is a stable tiebreak so paged slices don't overlap or skip.
+    private IQueryable<Post> OrderedAnswers(int threadId) =>
+        _context.Posts
+            .Where(p => p.SUThreadId == threadId)
+            .OrderByDescending(p => p.IsAcceptedAnswer)
+            .ThenByDescending(p => p.Upvotes - p.Downvotes)
+            .ThenBy(p => p.CreatedAt)
+            .ThenBy(p => p.Id);
+
     [Route("/Thread/{id}")]
     public IActionResult Detail(int id)
     {
         var thread = _context.SUThreads
             .Include(t => t.User)
-            .Include(t => t.Posts)
-            .ThenInclude(p => p.User)
-            .Include(t => t.Posts)
-            .ThenInclude(p => p.Comments)
-            .ThenInclude(c => c.User)
             .FirstOrDefault(t => t.Id == id);
-        
+
         if (thread == null)
             return NotFound();
 
@@ -159,44 +166,69 @@ public class ThreadController : Controller
         {
             thread.ViewCount++;
         }
-        
+
         _context.SaveChanges();
+
+        // Load only the first page of answers; the rest arrive via the Answers endpoint.
+        ViewBag.TotalAnswers = _context.Posts.Count(p => p.SUThreadId == id);
+        ViewBag.AnswersPageSize = AnswersPageSize;
+        ViewBag.AnswersCurrentPage = 1;
+
+        thread.Posts = OrderedAnswers(id)
+            .Include(p => p.User)
+            .Include(p => p.Comments)
+            .ThenInclude(c => c.User)
+            .Take(AnswersPageSize)
+            .ToList();
 
         return View(thread);
     }
 
-    // Toggle saving (bookmarking) a thread for the current user: saves it if not
-    // already saved, otherwise removes the existing save.
-    [Authorize]
-    [HttpPost]
-    [ValidateAntiForgeryToken]
-    [Route("/Thread/{id}/Save")]
-    public IActionResult ToggleSave(int id)
+    // Returns a rendered partial with one page of answers for the "Load more answers" button.
+    [Route("/Thread/{id}/Answers")]
+    public IActionResult Answers(int id, int page = 1, int pageSize = AnswersPageSize)
     {
-        var threadExists = _context.SUThreads.Any(t => t.Id == id);
-        if (!threadExists)
+        if (page < 1) page = 1;
+        if (pageSize < 1 || pageSize > 50) pageSize = AnswersPageSize;
+
+        var thread = _context.SUThreads.AsNoTracking().FirstOrDefault(t => t.Id == id);
+        if (thread == null)
             return NotFound();
 
-        var userId = User.FindFirst(ClaimTypes.NameIdentifier)!.Value;
-        var existing = _context.SavedThreads.FirstOrDefault(s => s.UserId == userId && s.SUThreadId == id);
+        var posts = OrderedAnswers(id)
+            .Include(p => p.User)
+            .Include(p => p.Comments)
+            .ThenInclude(c => c.User)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToList();
 
-        if (existing == null)
+        var currentUserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        var answerVotes = new Dictionary<int, int>();
+        if (currentUserId != null)
         {
-            _context.SavedThreads.Add(new SavedThread
-            {
-                UserId = userId,
-                SUThreadId = id,
-                SavedAt = DateTime.UtcNow
-            });
+            var postIds = posts.Select(p => p.Id).ToList();
+            answerVotes = _context.PostVotes
+                .Where(v => v.UserId == currentUserId && postIds.Contains(v.PostId))
+                .ToDictionary(v => v.PostId, v => v.Value);
         }
-        else
+
+        var isThreadOwner = currentUserId != null && thread.UserId == currentUserId;
+
+        var answers = posts.Select(post => new AnswerViewModel
         {
-            _context.SavedThreads.Remove(existing);
-        }
+            Post = post,
+            ThreadId = id,
+            ThreadUserId = thread.UserId,
+            ThreadIsSolved = thread.IsSolved,
+            IsThreadOwner = isThreadOwner,
+            CurrentUserId = currentUserId,
+            AnswerVote = answerVotes.TryGetValue(post.Id, out var vote) ? vote : 0,
+            EditPostId = null,
+            EditCommentId = null
+        }).ToList();
 
-        _context.SaveChanges();
-
-        return RedirectToAction(nameof(Detail), new { id });
+        return PartialView("_AnswerList", answers);
     }
 
     [Authorize]
