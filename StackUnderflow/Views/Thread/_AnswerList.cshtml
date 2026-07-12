@@ -1,0 +1,6 @@
+@model IEnumerable<AnswerViewModel>
+
+@foreach (var answer in Model)
+{
+    <partial name="_AnswerCard" model="answer" />
+}

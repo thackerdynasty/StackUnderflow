@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Net;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using StackUnderflow.Data;
@@ -6,21 +7,87 @@ using StackUnderflow.Models;
 
 namespace StackUnderflow.Controllers;
 
-public class HomeController(ApplicationDbContext context) : Controller
+public class HomeController : Controller
 {
-    private readonly ApplicationDbContext _context = context;
+    private readonly ApplicationDbContext _context;
+    
+    public HomeController(ApplicationDbContext context)
+    {
+        _context = context;
+    }
+    
+    private const int PageSize = 5;
 
     public IActionResult Index()
     {
+        var totalCount = _context.SUThreads.Count();
+
         List<SUThread> threads = _context.SUThreads
             .Include(t => t.User)
             .Include(t => t.Posts)
             .Include(t => t.ThreadTags)
             .ThenInclude(tt => tt.Tag)
-            .OrderByDescending(t => t.UpvoteCount)
-            .Take(10)
+            // Keep this ordering in sync with the paginated API so "Load More" pages line up.
+            .OrderByDescending(t => t.CreatedAt)
+            .ThenByDescending(t => t.Id)
+            .Take(PageSize)
             .ToList();
-        return View(threads);
+
+        ViewData["PageSize"] = PageSize;
+        ViewData["CurrentPage"] = 1;
+        ViewData["TotalPages"] = (int)Math.Ceiling((double)totalCount / PageSize);
+
+        List<User> topUsers = _context.Users
+            .OrderByDescending(u => u.Reputation)
+            .ThenBy(u => u.UserName)
+            .Take(3)
+            .ToList();
+
+        return View(new HomeViewModel
+        {
+            Threads = threads,
+            TopUsers = topUsers
+        });
+    }
+
+    [HttpPost]
+    public IActionResult Index(string query)
+    {
+        if (string.IsNullOrEmpty(query))
+        {
+            return RedirectToAction("Index");
+        }
+        
+        var filtered = _context.SUThreads
+            .Where(t => t.Title.Contains(query) || t.Content.Contains(query));
+
+        var totalCount = filtered.Count();
+
+        var threads = filtered
+            .Include(t => t.User)
+            .Include(t => t.Posts)
+            .OrderByDescending(t => t.CreatedAt)
+            .ThenByDescending(t => t.Id)
+            .Take(PageSize)
+            .ToList();
+
+        ViewData["PageSize"] = PageSize;
+        ViewData["CurrentPage"] = 1;
+        ViewData["TotalPages"] = (int)Math.Ceiling((double)totalCount / PageSize);
+
+        ViewData["Query"] = query;
+
+        List<User> topUsers = _context.Users
+            .OrderByDescending(u => u.Reputation)
+            .ThenBy(u => u.UserName)
+            .Take(3)
+            .ToList();
+
+        return View(new HomeViewModel
+        {
+            Threads = threads,
+            TopUsers = topUsers
+        });
     }
 
     public IActionResult Privacy()
