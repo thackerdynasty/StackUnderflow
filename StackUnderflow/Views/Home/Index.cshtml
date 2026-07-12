@@ -1,7 +1,14 @@
-﻿@model List<SUThread>
+﻿@model HomeViewModel
 
 @{
     ViewData["Title"] = "Top Questions";
+
+    static string LeaderName(User user)
+    {
+        var name = user.UserName ?? user.Email ?? "User";
+        var at = name.IndexOf('@');
+        return at > 0 ? name[..at] : name;
+    }
 }
 
 <section class="questions-shell">
@@ -13,6 +20,32 @@
         <a asp-controller="Thread" asp-action="Create" class="btn btn-primary ask-button">Ask Question</a>
     </div>
 
+    @if (Model.TopUsers.Count > 0)
+    {
+        <section class="leaderboard" aria-label="Top users by reputation">
+            <h2 class="leaderboard-title">Top Users</h2>
+            <ol class="leaderboard-list">
+                @{ var rank = 0; }
+                @foreach (var user in Model.TopUsers)
+                {
+                    rank++;
+                    var leaderName = LeaderName(user);
+                    var initials = string.IsNullOrEmpty(leaderName) ? "?" : leaderName[..1].ToUpperInvariant();
+                    <li class="leaderboard-entry rank-@rank">
+                        <span class="leaderboard-rank" aria-label="Rank @rank">@rank</span>
+                        <span class="leaderboard-avatar">@initials</span>
+                        <div class="leaderboard-info">
+                            <a class="leaderboard-name"
+                               asp-controller="Profile" asp-action="Details" asp-route-id="@user.Id"
+                               data-profile-card-user-id="@user.Id">@leaderName</a>
+                            <span class="leaderboard-rep">@user.Reputation reputation</span>
+                        </div>
+                    </li>
+                }
+            </ol>
+        </section>
+    }
+
     <div class="question-tabs" aria-label="Question filters">
         <button type="button" class="question-tab active" data-question-filter="new" aria-pressed="true">New</button>
         <button type="button" class="question-tab" data-question-filter="trending" aria-pressed="false">Trending</button>
@@ -20,7 +53,7 @@
         <button type="button" class="question-tab" data-question-filter="upvoted" aria-pressed="false">Most Upvoted</button>
     </div>
 
-    @if (Model.Count == 0)
+    @if (Model.Threads.Count == 0)
     {
         <div class="empty-questions">
             <h2>No questions yet</h2>
@@ -30,7 +63,7 @@
     else
     {
         <div class="question-list">
-            @foreach (var thread in Model)
+            @foreach (var thread in Model.Threads)
             {
                 var answerCount = thread.Posts?.Count ?? 0;
                 var recentAnswerCount = thread.Posts?.Count(post => post.CreatedAt >= DateTime.UtcNow.AddDays(-7)) ?? 0;

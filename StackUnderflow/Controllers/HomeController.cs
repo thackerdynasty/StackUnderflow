@@ -18,7 +18,18 @@ public class HomeController(ApplicationDbContext context) : Controller
             .OrderByDescending(t => t.UpvoteCount)
             .Take(10)
             .ToList();
-        return View(threads);
+
+        List<User> topUsers = _context.Users
+            .OrderByDescending(u => u.Reputation)
+            .ThenBy(u => u.UserName)
+            .Take(3)
+            .ToList();
+
+        return View(new HomeViewModel
+        {
+            Threads = threads,
+            TopUsers = topUsers
+        });
     }
 
     public IActionResult Privacy()
