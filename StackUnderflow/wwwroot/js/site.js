@@ -559,3 +559,94 @@ function attachAnswerPagination() {
 
     button.addEventListener('click', loadNextPage);
 }
+
+// -----------------------------
+// Saved threads (bookmark) + live leaderboard
+// -----------------------------
+(function () {
+    function antiForgeryToken() {
+        const input = document.querySelector('input[name="__RequestVerificationToken"]');
+        return input ? input.value : '';
+    }
+
+    // Rebuild the leaderboard panel from API data (top authors by save count).
+    async function refreshLeaderboard() {
+        const panel = document.getElementById('leaderboard');
+        const list = document.getElementById('leaderboard-list');
+        if (!panel || !list) return;
+
+        try {
+            const response = await fetch(panel.dataset.leaderboardUrl, {
+                headers: { 'Accept': 'application/json' }
+            });
+            if (!response.ok) throw new Error(`Request failed: ${response.status}`);
+
+            const entries = await response.json();
+            const template = panel.dataset.profileUrlTemplate || '';
+
+            list.innerHTML = '';
+            entries.forEach((entry, index) => {
+                const rank = index + 1;
+                const href = template.replace('__ID__', encodeURIComponent(entry.userId));
+                const saveLabel = entry.saveCount === 1 ? 'save' : 'saves';
+
+                const li = document.createElement('li');
+                li.className = `leaderboard-entry rank-${rank}`;
+                li.innerHTML = `
+                    <span class="leaderboard-rank" aria-label="Rank ${rank}">${rank}</span>
+                    <span class="leaderboard-avatar">${htmlEncode(entry.initials)}</span>
+                    <div class="leaderboard-info">
+                        <a class="leaderboard-name" href="${href}" data-profile-card-user-id="${htmlEncode(entry.userId)}">${htmlEncode(entry.name)}</a>
+                        <span class="leaderboard-rep">${entry.saveCount} ${saveLabel}</span>
+                    </div>`;
+                list.appendChild(li);
+            });
+
+            panel.hidden = entries.length === 0;
+        } catch (error) {
+            console.error('Failed to refresh leaderboard', error);
+        }
+    }
+
+    async function toggleSave(button) {
+        const threadId = button.dataset.saveThreadId;
+        if (!threadId || button.dataset.busy === 'true') return;
+
+        button.dataset.busy = 'true';
+        try {
+            const response = await fetch(`/api/saved-threads/${encodeURIComponent(threadId)}/toggle`, {
+                method: 'POST',
+                headers: {
+                    'Accept': 'application/json',
+                    'RequestVerificationToken': antiForgeryToken()
+                }
+            });
+            if (!response.ok) throw new Error(`Request failed: ${response.status}`);
+
+            const result = await response.json();
+            const saved = result.saved === true;
+
+            button.classList.toggle('is-saved', saved);
+            button.setAttribute('aria-pressed', saved ? 'true' : 'false');
+            const label = saved ? 'Remove from your saved threads' : 'Save this thread to your profile';
+            button.setAttribute('title', label);
+            button.setAttribute('aria-label', label);
+
+            // Keep the leaderboard in sync when it shares the page.
+            refreshLeaderboard();
+        } catch (error) {
+            console.error('Failed to toggle saved thread', error);
+        } finally {
+            button.dataset.busy = 'false';
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+        document.querySelectorAll('.save-control[data-save-thread-id]').forEach((button) => {
+            button.addEventListener('click', () => toggleSave(button));
+        });
+
+        // Load the freshest ranking on the home page (reflects saves made elsewhere).
+        refreshLeaderboard();
+    });
+})();

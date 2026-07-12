@@ -7,6 +7,6 @@ public class HomeViewModel
 {
     public IReadOnlyList<SUThread> Threads { get; set; } = [];
 
-    /// <summary>Top users by reputation, highest first, for the leaderboard panel.</summary>
-    public IReadOnlyList<User> TopUsers { get; set; } = [];
+    /// <summary>Top authors by how many times their threads have been saved, highest first.</summary>
+    public IReadOnlyList<LeaderboardEntry> Leaderboard { get; set; } = [];
 }
