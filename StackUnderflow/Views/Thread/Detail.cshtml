@@ -98,7 +98,7 @@
         </aside>
 
         <div class="post-body">
-            <div class="post-content">@Model.Content</div>
+            <div class="post-content">@Html.Raw(ContentParser.RenderCodeBlocks(Model.Content))</div>
 
             <footer class="post-footer">
                 <div class="post-actions">
