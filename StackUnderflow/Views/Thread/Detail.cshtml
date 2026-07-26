@@ -45,6 +45,10 @@
 }
 
 <section class="thread-detail">
+    @if (TempData["TagWarning"] is string tagWarning)
+    {
+        <div class="alert alert-warning" role="alert">@tagWarning</div>
+    }
     <header class="thread-header">
         <div>
             <h1>@Model.Title</h1>
@@ -52,6 +56,12 @@
                 <span>Asked @Model.CreatedAt.ToString("MMM d, yyyy")</span>
                 <span>Modified @Model.UpdatedAt.ToString("MMM d, yyyy")</span>
                 <span>Viewed @Model.ViewCount @(Model.ViewCount == 1 ? "time" : "times")</span>
+            </div>
+            <div class="thread-tags">
+                @foreach (var threadTag in Model.ThreadTags ?? Array.Empty<ThreadTag>())
+                {
+                    <span class="badge bg-secondary">@threadTag.Tag?.Name</span>
+                }
             </div>
         </div>
     </header>

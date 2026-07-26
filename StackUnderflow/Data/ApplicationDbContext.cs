@@ -12,7 +12,8 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public DbSet<ThreadVote> ThreadVotes { get; set; }
     public DbSet<PostVote> PostVotes { get; set; }
     public DbSet<SavedThread> SavedThreads { get; set; }
-
+    public DbSet<Tag> Tags { get; set; }
+    public DbSet<ThreadTag> ThreadTags { get; set; }
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);
@@ -95,5 +96,21 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
         builder.Entity<SavedThread>()
             .HasIndex(s => new { s.UserId, s.SUThreadId })
             .IsUnique();
+
+        builder.Entity<Tag>()
+            .HasIndex(t => t.Name)
+            .IsUnique();
+
+        builder.Entity<ThreadTag>()
+            .HasOne(tt => tt.SUThread)
+            .WithMany(t => t.ThreadTags)
+            .HasForeignKey(tt => tt.SUThreadId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        builder.Entity<ThreadTag>()
+            .HasOne(tt => tt.Tag)
+            .WithMany(t => t.ThreadTags)
+            .HasForeignKey(tt => tt.TagId)
+            .OnDelete(DeleteBehavior.Cascade);
     }
 }

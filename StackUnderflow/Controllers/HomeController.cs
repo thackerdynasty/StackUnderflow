@@ -26,6 +26,8 @@ public class HomeController : Controller
         List<SUThread> threads = _context.SUThreads
             .Include(t => t.User)
             .Include(t => t.Posts)
+            .Include(t => t.ThreadTags)
+            .ThenInclude(tt => tt.Tag)
             // Keep this ordering in sync with the paginated API so "Load More" pages line up.
             .OrderByDescending(t => t.CreatedAt)
             .ThenByDescending(t => t.Id)
