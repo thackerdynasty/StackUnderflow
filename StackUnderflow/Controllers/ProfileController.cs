@@ -59,6 +59,26 @@ public class ProfileController : Controller
         return View(nameof(Index), model);
     }
 
+    // GET: /Profile/InfoCard/{id}
+    [AllowAnonymous]
+    public async Task<IActionResult> InfoCard(string? id)
+    {
+        if (string.IsNullOrEmpty(id))
+        {
+            return NotFound();
+        }
+
+        var user = await _userManager.FindByIdAsync(id);
+        if (user is null)
+        {
+            return NotFound();
+        }
+
+        var isOwnProfile = User.Identity?.IsAuthenticated == true && id == _userManager.GetUserId(User);
+        var model = await BuildProfileAsync(user, isOwnProfile);
+        return PartialView("~/Views/_InfoCard.cshtml", model);
+    }
+
     private async Task<ProfileViewModel> BuildProfileAsync(User user, bool isOwnProfile)
     {
         var questions = await _dbContext.SUThreads
@@ -82,6 +102,15 @@ public class ProfileController : Controller
             .OrderByDescending(c => c.CreatedAt)
             .ToListAsync();
 
+        var savedThreads = await _dbContext.SavedThreads
+            .AsNoTracking()
+            .Where(s => s.UserId == user.Id)
+            .OrderByDescending(s => s.SavedAt)
+            .Include(s => s.SUThread)
+            .ThenInclude(t => t.User)
+            .Select(s => s.SUThread)
+            .ToListAsync();
+
         return new ProfileViewModel
         {
             User = user,
@@ -89,10 +118,12 @@ public class ProfileController : Controller
             Questions = questions,
             Answers = answers,
             Comments = comments,
+            SavedThreads = savedThreads,
             QuestionCount = questions.Count,
             AnswerCount = answers.Count,
             AcceptedAnswerCount = answers.Count(p => p.IsAcceptedAnswer),
             CommentCount = comments.Count,
+            SavedThreadCount = savedThreads.Count,
         };
     }
 
