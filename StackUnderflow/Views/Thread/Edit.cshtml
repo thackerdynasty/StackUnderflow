@@ -17,6 +17,11 @@
 
                         <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
 
+                        @if (TempData["Error"] is string error)
+                        {
+                            <div class="alert alert-danger" role="alert">@error</div>
+                        }
+
                         <div class="mb-3">
                             <label asp-for="Title" class="form-label">Title</label>
                             <input asp-for="Title" class="form-control" />
