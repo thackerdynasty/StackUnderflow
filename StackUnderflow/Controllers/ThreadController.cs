@@ -44,7 +44,7 @@ public partial class ThreadController(ApplicationDbContext context) : Controller
 
         return warnings.Count > 0 ? string.Join(" ", warnings) : null;
     }
-
+    
     // GET
     public IActionResult Index()
     {

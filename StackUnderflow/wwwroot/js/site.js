@@ -650,3 +650,86 @@ function attachAnswerPagination() {
         refreshLeaderboard();
     });
 })();
+
+// -----------------------------
+// Profile image upload
+// -----------------------------
+(function () {
+    function antiForgeryToken() {
+        const input = document.querySelector('input[name="__RequestVerificationToken"]');
+        return input ? input.value : '';
+    }
+
+    // Pulls the message out of the ProblemDetails body the API returns on failure.
+    async function errorMessage(response) {
+        try {
+            const problem = await response.json();
+            if (problem && problem.detail) return problem.detail;
+        } catch {
+            // Fall through to the generic message below.
+        }
+        return `Upload failed (${response.status}).`;
+    }
+
+    async function upload(container) {
+        const input = document.getElementById('avatarFile');
+        const button = document.getElementById('avatarUploadButton');
+        const status = document.getElementById('avatarUploadStatus');
+        const file = input && input.files ? input.files[0] : null;
+
+        if (!file) {
+            status.textContent = 'Choose an image first.';
+            return;
+        }
+
+        const body = new FormData();
+        body.append('file', file);
+
+        button.disabled = true;
+        status.textContent = 'Uploading...';
+
+        try {
+            const response = await fetch(container.dataset.uploadUrl, {
+                method: 'POST',
+                headers: {
+                    'Accept': 'application/json',
+                    'RequestVerificationToken': antiForgeryToken()
+                },
+                body: body
+            });
+
+            if (!response.ok) {
+                status.textContent = await errorMessage(response);
+                return;
+            }
+
+            const result = await response.json();
+            const image = document.getElementById('profileAvatarImage');
+
+            // Each upload gets a fresh URL, so the new image shows immediately even
+            // though avatars are served with long cache headers.
+            if (image && result.profileImageUrl) {
+                image.src = result.profileImageUrl;
+                image.style.display = '';
+                const initials = image.nextElementSibling;
+                if (initials) initials.style.display = 'none';
+            }
+
+            input.value = '';
+            status.textContent = 'Profile image updated.';
+        } catch (error) {
+            console.error('Failed to upload profile image', error);
+            status.textContent = 'Upload failed. Please try again.';
+        } finally {
+            button.disabled = false;
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+        const container = document.getElementById('avatarUpload');
+        if (!container) return;
+
+        const button = document.getElementById('avatarUploadButton');
+        if (button) button.addEventListener('click', () => upload(container));
+    });
+})();

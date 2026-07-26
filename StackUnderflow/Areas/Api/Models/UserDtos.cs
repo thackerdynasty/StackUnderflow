@@ -15,6 +15,14 @@ public class UserDto
     public string? Bio { get; set; }
 }
 
+// Returned after a successful profile image upload. The URL is composed from the
+// stored relative path at response time, the same way it is at read time.
+public class ProfileImageUploadedDto
+{
+    public string ProfileImagePath { get; set; } = default!;
+    public string? ProfileImageUrl { get; set; }
+}
+
 // Payload for updating an existing user. All fields optional so callers can
 // patch a subset; null values leave the corresponding column untouched.
 public class UpdateUserDto

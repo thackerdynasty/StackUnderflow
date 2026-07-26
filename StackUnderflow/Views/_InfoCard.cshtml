@@ -14,9 +14,9 @@
 <div class="info-card mb-4">
     <div class="profile-header d-flex flex-column flex-sm-row align-items-sm-center gap-3 mb-4">
         <div class="profile-avatar">
-            @if (Model.ProfilePicture is not null)
+            @if (Model.AvatarUrl is not null)
             {
-                <img src="@Model.ProfilePicture" alt="@Model.DisplayName"
+                <img src="@Model.AvatarUrl" alt="@Model.DisplayName"
                     onerror="this.style.display='none';this.nextElementSibling.style.display='flex';"/>
                 <span class="profile-avatar-initials" style="display:none;">@Model.Initials</span>
             }

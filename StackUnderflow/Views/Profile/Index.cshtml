@@ -13,14 +13,16 @@
 
 <div class="profile-header d-flex flex-column flex-sm-row align-items-sm-center gap-3 mb-4">
     <div class="profile-avatar">
-        @if (Model.ProfilePicture is not null)
+        @if (Model.AvatarUrl is not null)
         {
-            <img src="@Model.ProfilePicture" alt="@Model.DisplayName"
+            <img id="profileAvatarImage" src="@Model.AvatarUrl" alt="@Model.DisplayName"
                  onerror="this.style.display='none';this.nextElementSibling.style.display='flex';"/>
             <span class="profile-avatar-initials" style="display:none;">@Model.Initials</span>
         }
         else
         {
+            <img id="profileAvatarImage" alt="@Model.DisplayName" style="display:none;"
+                 onerror="this.style.display='none';this.nextElementSibling.style.display='flex';"/>
             <span class="profile-avatar-initials">@Model.Initials</span>
         }
     </div>
@@ -31,6 +33,29 @@
             <span class="mx-1">&bull;</span>
             Member since @Model.JoinDate.ToString("MMMM d, yyyy")
         </div>
+
+        @if (Model.IsOwnProfile)
+        {
+            @if (Model.CanUploadImage)
+            {
+                <div class="mt-2" id="avatarUpload" data-upload-url="@Url.Content($"~/api/user/{Model.User.Id}/profile-image")">
+                    <div class="input-group input-group-sm" style="max-width: 22rem;">
+                        <input type="file" class="form-control" id="avatarFile"
+                               accept="image/jpeg,image/png,image/webp"
+                               aria-label="Choose a new profile image"/>
+                        <button class="btn btn-outline-secondary" type="button" id="avatarUploadButton">Upload</button>
+                    </div>
+                    <div class="form-text" id="avatarUploadStatus">JPEG, PNG, or WebP. Up to 2 MB.</div>
+                </div>
+            }
+            else
+            {
+                <div class="form-text mt-2">
+                    Profile image uploads are not available yet because image storage has not been
+                    configured. See the README for setup steps.
+                </div>
+            }
+        }
     </div>
     @if (Model.IsOwnProfile)
     {

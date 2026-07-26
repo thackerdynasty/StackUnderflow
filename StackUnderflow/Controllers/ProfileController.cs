@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using StackUnderflow.Data;
 using StackUnderflow.Models;
+using StackUnderflow.Services.ProfileImages;
 
 namespace StackUnderflow.Controllers;
 
@@ -14,11 +15,16 @@ public class ProfileController : Controller
 {
     private readonly UserManager<User> _userManager;
     private readonly ApplicationDbContext _dbContext;
+    private readonly IProfileImageStorage _profileImageStorage;
 
-    public ProfileController(UserManager<User> userManager, ApplicationDbContext dbContext)
+    public ProfileController(
+        UserManager<User> userManager,
+        ApplicationDbContext dbContext,
+        IProfileImageStorage profileImageStorage)
     {
         _userManager = userManager;
         _dbContext = dbContext;
+        _profileImageStorage = profileImageStorage;
     }
 
     // GET: /Profile
@@ -115,6 +121,10 @@ public class ProfileController : Controller
         {
             User = user,
             IsOwnProfile = isOwnProfile,
+            // Null when nothing has been uploaded or storage is not configured, in
+            // which case the view falls back to ProfilePicture and then to initials.
+            UploadedImageUrl = _profileImageStorage.GetUrl(user.ProfileImagePath),
+            CanUploadImage = isOwnProfile && _profileImageStorage.IsConfigured,
             Questions = questions,
             Answers = answers,
             Comments = comments,

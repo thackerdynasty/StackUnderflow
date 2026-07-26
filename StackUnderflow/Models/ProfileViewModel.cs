@@ -16,6 +16,25 @@ public class ProfileViewModel
     public Uri? ProfilePicture => User.ProfilePicture;
     public string? Bio => User.Bio;
 
+    /// <summary>
+    /// Absolute URL of an uploaded avatar, composed at read time from the relative
+    /// path in the database. Null when the user has not uploaded one, or when no
+    /// image storage is configured.
+    /// </summary>
+    public string? UploadedImageUrl { get; set; }
+
+    /// <summary>
+    /// The avatar to render: an uploaded image wins, then the external
+    /// <see cref="ProfilePicture"/> URL, then null so the view shows initials.
+    /// </summary>
+    public string? AvatarUrl => UploadedImageUrl ?? User.ProfilePicture?.ToString();
+
+    /// <summary>
+    /// True only on your own profile and only when image storage is configured, so
+    /// the upload control is hidden rather than offered and then rejected with a 503.
+    /// </summary>
+    public bool CanUploadImage { get; set; }
+
     public int QuestionCount { get; set; }
     public int AnswerCount { get; set; }
     public int AcceptedAnswerCount { get; set; }
