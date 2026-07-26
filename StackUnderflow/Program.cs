@@ -16,6 +16,9 @@ builder.Services.AddDefaultIdentity<User>(options => options.SignIn.RequireConfi
     .AddEntityFrameworkStores<ApplicationDbContext>();
 builder.Services.AddControllersWithViews();
 
+// Let fetch()-based API calls send the antiforgery token via a request header.
+builder.Services.AddAntiforgery(options => options.HeaderName = "RequestVerificationToken");
+
 var app = builder.Build();
 
 using (var scope = app.Services.CreateScope())

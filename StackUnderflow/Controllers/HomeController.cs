@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using StackUnderflow.Data;
 using StackUnderflow.Models;
+using StackUnderflow.Services;
 
 namespace StackUnderflow.Controllers;
 
@@ -18,7 +19,7 @@ public class HomeController : Controller
     
     private const int PageSize = 5;
 
-    public IActionResult Index()
+    public async Task<IActionResult> Index()
     {
         var totalCount = _context.SUThreads.Count();
 
@@ -35,21 +36,17 @@ public class HomeController : Controller
         ViewData["CurrentPage"] = 1;
         ViewData["TotalPages"] = (int)Math.Ceiling((double)totalCount / PageSize);
 
-        List<User> topUsers = _context.Users
-            .OrderByDescending(u => u.Reputation)
-            .ThenBy(u => u.UserName)
-            .Take(3)
-            .ToList();
+        var leaderboard = await LeaderboardService.GetTopAuthorsAsync(_context, 3);
 
         return View(new HomeViewModel
         {
             Threads = threads,
-            TopUsers = topUsers
+            Leaderboard = leaderboard
         });
     }
 
     [HttpPost]
-    public IActionResult Index(string query)
+    public async Task<IActionResult> Index(string query)
     {
         if (string.IsNullOrEmpty(query))
         {
@@ -75,16 +72,12 @@ public class HomeController : Controller
 
         ViewData["Query"] = query;
 
-        List<User> topUsers = _context.Users
-            .OrderByDescending(u => u.Reputation)
-            .ThenBy(u => u.UserName)
-            .Take(3)
-            .ToList();
+        var leaderboard = await LeaderboardService.GetTopAuthorsAsync(_context, 3);
 
         return View(new HomeViewModel
         {
             Threads = threads,
-            TopUsers = topUsers
+            Leaderboard = leaderboard
         });
     }
 
