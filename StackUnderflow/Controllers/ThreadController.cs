@@ -95,9 +95,10 @@ public class ThreadController : Controller
             return RedirectToAction(nameof(Edit), new { id });
         }
         var (isSafe, _) = _contentSafetyAnalyzer.CheckText(content);
-        if (!isSafe)
+        var (isTitleSafe, _) = _contentSafetyAnalyzer.CheckText(title);
+        if (!isSafe || !isTitleSafe)
         {
-            TempData["Error"] = "Content is not safe.";
+            TempData["Error"] = "Title or content is not safe.";
             return RedirectToAction(nameof(Edit), new { id });
         }
         thread.Title = title.Trim();
