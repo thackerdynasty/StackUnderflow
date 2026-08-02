@@ -4,14 +4,23 @@ using Microsoft.EntityFrameworkCore;
 using StackUnderflow.Data;
 using StackUnderflow.Models;
 using System.Security.Claims;
+using StackUnderflow.Utilities;
 using System.Text.RegularExpressions;
 
 namespace StackUnderflow.Controllers;
 
-public partial class ThreadController(ApplicationDbContext context) : Controller
+public partial class ThreadController : Controller
 {
-
-    private readonly ApplicationDbContext _context = context;
+    private readonly ApplicationDbContext _context;
+    private readonly ContentSafetyAnalyzer _contentSafetyAnalyzer;
+    
+    public ThreadController(
+        ApplicationDbContext context,
+        ContentSafetyAnalyzer contentSafetyAnalyzer)
+    {
+        _context = context;
+        _contentSafetyAnalyzer = contentSafetyAnalyzer;
+    }
 
     [GeneratedRegex(@"^[a-z0-9][a-z0-9+#.\-]{0,24}$")]
     private static partial Regex TagNameRegex();
@@ -59,6 +68,7 @@ public partial class ThreadController(ApplicationDbContext context) : Controller
 
     [Authorize]
     [HttpPost]
+    [ValidateAntiForgeryToken]
     [Route("/Thread/Create")]
     public IActionResult Create(string title, string content, string threadTags)
     {
@@ -66,6 +76,13 @@ public partial class ThreadController(ApplicationDbContext context) : Controller
         if (string.IsNullOrWhiteSpace(title) || string.IsNullOrWhiteSpace(content))
         {
             TempData["Error"] = "Title and content are required.";
+            return RedirectToAction(nameof(Create));
+        }
+        var (isSafe, _) = _contentSafetyAnalyzer.CheckText(content);
+        var (isTitleSafe, _) = _contentSafetyAnalyzer.CheckText(title);
+        if (!isSafe || !isTitleSafe)
+        {
+            TempData["Error"] = "Content is not safe.";
             return RedirectToAction(nameof(Create));
         }
         var thread = new SUThread
@@ -104,6 +121,7 @@ public partial class ThreadController(ApplicationDbContext context) : Controller
 
     [Authorize]
     [HttpPost]
+    [ValidateAntiForgeryToken]
     [Route("/Thread/{id}/Edit")]
     public IActionResult Edit(int id, string title, string content, string threadTags)
     {
@@ -118,6 +136,13 @@ public partial class ThreadController(ApplicationDbContext context) : Controller
         if (string.IsNullOrWhiteSpace(title) || string.IsNullOrWhiteSpace(content))
         {
             TempData["Error"] = "Title and content are required.";
+            return RedirectToAction(nameof(Edit), new { id });
+        }
+        var (isSafe, _) = _contentSafetyAnalyzer.CheckText(content);
+        var (isTitleSafe, _) = _contentSafetyAnalyzer.CheckText(title);
+        if (!isSafe || !isTitleSafe)
+        {
+            TempData["Error"] = "Title or content is not safe.";
             return RedirectToAction(nameof(Edit), new { id });
         }
         thread.Title = title.Trim();
@@ -285,6 +310,13 @@ public partial class ThreadController(ApplicationDbContext context) : Controller
             return RedirectToAction(nameof(Detail), new { id });
         }
 
+        var (isSafe, _) = _contentSafetyAnalyzer.CheckText(content);
+        if (!isSafe)
+        {
+            TempData["AnswerError"] = "Content is not safe.";
+            return RedirectToAction(nameof(Detail), new { id });
+        }
+
         var threadExists = _context.SUThreads.Any(t => t.Id == id);
         if (!threadExists)
             return NotFound();
@@ -357,6 +389,13 @@ public partial class ThreadController(ApplicationDbContext context) : Controller
         if (!postExists)
             return NotFound();
 
+        var (isSafe, _) = _contentSafetyAnalyzer.CheckText(content);
+        if (!isSafe)
+        {
+            TempData["CommentError"] = "Content is not safe.";
+            return RedirectToAction(nameof(Detail), new { id });
+        }
+
         var comment = new Comment
         {
             Content = content.Trim(),
@@ -390,6 +429,13 @@ public partial class ThreadController(ApplicationDbContext context) : Controller
         if (string.IsNullOrWhiteSpace(content))
         {
             TempData["CommentEditError"] = "Comment content is required.";
+            return RedirectToAction(nameof(Detail), new { id = threadId, editCommentId = commentId });
+        }
+
+        var (isSafe, _) = _contentSafetyAnalyzer.CheckText(content);
+        if (!isSafe)
+        {
+            TempData["CommentEditError"] = "Content is not safe.";
             return RedirectToAction(nameof(Detail), new { id = threadId, editCommentId = commentId });
         }
 
@@ -539,6 +585,13 @@ public partial class ThreadController(ApplicationDbContext context) : Controller
         var userId = User.FindFirst(ClaimTypes.NameIdentifier)!.Value;
         if (post.UserId != userId)
             return Forbid();
+
+        var (isSafe, _) = _contentSafetyAnalyzer.CheckText(content);
+        if (!isSafe)
+        {
+            TempData["PostEditError"] = "Content is not safe.";
+            return RedirectToAction(nameof(Detail), new { id = threadId, editPostId = postId });
+        }
 
         post.Content = content.Trim();
         post.UpdatedAt = DateTime.UtcNow;
