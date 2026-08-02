@@ -105,64 +105,64 @@ public class ThreadController : ControllerBase
 
     // PUT: api/Thread/5
     // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
-    [HttpPut("{id}")]
-    [Authorize]
-    public async Task<IActionResult> PutSUThread(int id, SUThread sUThread)
-    {
-        if (id != sUThread.Id)
-        {
-            return BadRequest();
-        }
-
-        _context.Entry(sUThread).State = EntityState.Modified;
-
-        try
-        {
-            await _context.SaveChangesAsync();
-        }
-        catch (DbUpdateConcurrencyException)
-        {
-            if (!SUThreadExists(id))
-            {
-                return NotFound();
-            }
-            else
-            {
-                throw;
-            }
-        }
-
-        return NoContent();
-    }
+    // [HttpPut("{id}")]
+    // [Authorize]
+    // public async Task<IActionResult> PutSUThread(int id, SUThread sUThread)
+    // {
+    //     if (id != sUThread.Id)
+    //     {
+    //         return BadRequest();
+    //     }
+    //
+    //     _context.Entry(sUThread).State = EntityState.Modified;
+    //
+    //     try
+    //     {
+    //         await _context.SaveChangesAsync();
+    //     }
+    //     catch (DbUpdateConcurrencyException)
+    //     {
+    //         if (!SUThreadExists(id))
+    //         {
+    //             return NotFound();
+    //         }
+    //         else
+    //         {
+    //             throw;
+    //         }
+    //     }
+    //
+    //     return NoContent();
+    // }
 
     // POST: api/Thread
     // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
-    [HttpPost]
-    [Authorize]
-    public async Task<ActionResult<SUThread>> PostSUThread(SUThread sUThread)
-    {
-        _context.SUThreads.Add(sUThread);
-        await _context.SaveChangesAsync();
-
-        return CreatedAtAction("GetSUThread", new { id = sUThread.Id }, sUThread);
-    }
+    // [HttpPost]
+    // [Authorize]
+    // public async Task<ActionResult<SUThread>> PostSUThread(SUThread sUThread)
+    // {
+    //     _context.SUThreads.Add(sUThread);
+    //     await _context.SaveChangesAsync();
+    //
+    //     return CreatedAtAction("GetSUThread", new { id = sUThread.Id }, sUThread);
+    // }
 
     // DELETE: api/Thread/5
-    [HttpDelete("{id}")]
-    [Authorize]
-    public async Task<IActionResult> DeleteSUThread(int id)
-    {
-        var sUThread = await _context.SUThreads.FindAsync(id);
-        if (sUThread == null)
-        {
-            return NotFound();
-        }
-
-        _context.SUThreads.Remove(sUThread);
-        await _context.SaveChangesAsync();
-
-        return NoContent();
-    }
+    // [HttpDelete("{id}")]
+    // [Authorize]
+    // public async Task<IActionResult> DeleteSUThread(int id)
+    // {
+    //     var sUThread = await _context.SUThreads.FindAsync(id);
+    //     if (sUThread == null)
+    //     {
+    //         return NotFound();
+    //     }
+    //
+    //     _context.SUThreads.Remove(sUThread);
+    //     await _context.SaveChangesAsync();
+    //
+    //     return NoContent();
+    // }
 
     private bool SUThreadExists(int id)
     {
