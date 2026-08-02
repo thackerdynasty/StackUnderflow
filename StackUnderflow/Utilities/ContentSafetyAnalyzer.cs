@@ -46,7 +46,8 @@ public sealed class ContentSafetyAnalyzer
                 "Content Safety analysis failed with status {StatusCode} and error code {ErrorCode}.",
                 ex.Status,
                 ex.ErrorCode);
-            throw;
+            // Fail closed if the moderation service is unavailable.
+            return new ContentSafety(violenceSeverity: 2, hateSeverity: 2, selfHarmSeverity: 2, sexualContentSeverity: 2);
         }
 
         return new ContentSafety(
