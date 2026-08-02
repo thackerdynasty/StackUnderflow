@@ -82,6 +82,7 @@ public class ThreadController : Controller
 
     [Authorize]
     [HttpPost]
+    [ValidateAntiForgeryToken]
     [Route("/Thread/{id}/Edit")]
     public IActionResult Edit(int id, string title, string content)
     {
