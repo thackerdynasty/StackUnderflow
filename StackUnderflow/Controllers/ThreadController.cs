@@ -35,6 +35,7 @@ public class ThreadController : Controller
 
     [Authorize]
     [HttpPost]
+    [ValidateAntiForgeryToken]
     [Route("/Thread/Create")]
     public IActionResult Create(string title, string content)
     {
