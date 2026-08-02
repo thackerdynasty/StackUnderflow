@@ -584,6 +584,14 @@ body {
   margin: 0;
 }
 
+.vote-error {
+  font-size: .72rem;
+  line-height: 1.2;
+  max-width: 6.5rem;
+  text-align: center;
+  margin-top: .25rem;
+}
+
 .vote-control {
   border: 0;
   padding: 0;

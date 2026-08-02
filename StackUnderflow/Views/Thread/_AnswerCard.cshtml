@@ -24,28 +24,24 @@
          data-answer-created-at="@post.CreatedAt.ToUniversalTime().ToString("O")"
          data-answer-accepted="@post.IsAcceptedAnswer.ToString().ToLowerInvariant()"
          style="scroll-margin-top: 1rem;">
-    <aside class="vote-column" aria-label="Answer score">
-        <form asp-controller="Thread" asp-action="VoteAnswer" asp-route-threadId="@threadId" asp-route-postId="@post.Id" method="post" class="vote-form">
-            @if (isAnswerOwner)
-            {
-                <button type="submit" name="vote" value="up" class="vote-control @(answerVote == 1 ? "is-selected" : "")" aria-label="Upvote answer" disabled>▲</button>
-            }
-            else
-            {
-                <button type="submit" name="vote" value="up" class="vote-control @(answerVote == 1 ? "is-selected" : "")" aria-label="Upvote answer">▲</button>
-            }
-        </form>
-        <strong>@answerScore</strong>
-        <form asp-controller="Thread" asp-action="VoteAnswer" asp-route-threadId="@threadId" asp-route-postId="@post.Id" method="post" class="vote-form">
-            @if (isAnswerOwner)
-            {
-                <button type="submit" name="vote" value="down" class="vote-control @(answerVote == -1 ? "is-selected" : "")" aria-label="Downvote answer" disabled>▼</button>
-            }
-            else
-            {
-                <button type="submit" name="vote" value="down" class="vote-control @(answerVote == -1 ? "is-selected" : "")" aria-label="Downvote answer">▼</button>
-            }
-        </form>
+    <aside class="vote-column" aria-label="Answer score"
+           data-vote
+           data-vote-endpoint="/api/Post/@post.Id/vote"
+           data-authenticated="@(currentUserId != null ? "true" : "false")"
+           data-self-owned="@(isAnswerOwner ? "true" : "false")"
+           data-self-message="You can't vote on your own post.">
+        <button type="button"
+                class="vote-control @(answerVote == 1 ? "is-selected" : "")"
+                data-vote-direction="up"
+                aria-label="Upvote answer"
+                aria-pressed="@(answerVote == 1 ? "true" : "false")">▲</button>
+        <strong data-vote-score>@answerScore</strong>
+        <button type="button"
+                class="vote-control @(answerVote == -1 ? "is-selected" : "")"
+                data-vote-direction="down"
+                aria-label="Downvote answer"
+                aria-pressed="@(answerVote == -1 ? "true" : "false")">▼</button>
+        <span class="vote-error text-danger" data-vote-error role="alert" hidden></span>
         @if (post.IsAcceptedAnswer)
         {
             <div class="accepted-mark" title="Accepted answer" aria-label="Accepted answer">✓</div>

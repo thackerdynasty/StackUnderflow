@@ -15,6 +15,8 @@ builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 builder.Services.AddDefaultIdentity<User>(options => options.SignIn.RequireConfirmedAccount = true)
     .AddEntityFrameworkStores<ApplicationDbContext>();
 builder.Services.AddControllersWithViews();
+builder.Services.AddScoped<StackUnderflow.Services.ThreadVoteService>();
+builder.Services.AddScoped<StackUnderflow.Services.PostVoteService>();
 
 var app = builder.Build();
 
