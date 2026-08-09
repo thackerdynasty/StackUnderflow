@@ -471,4 +471,24 @@ public class ThreadController : Controller
         _context.SaveChanges();
         return RedirectToAction(nameof(Detail), new { id });
     }
+
+    [Authorize]
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public IActionResult UnacceptAnswer(int id, int postId)
+    {
+        var thread = _context.SUThreads
+            .Include(t => t.User)
+            .FirstOrDefault(t => t.Id == id);
+        var post =  _context.Posts
+            .Include(p => p.User)
+            .FirstOrDefault(p => p.Id == postId);
+        if (thread == null || post == null) return NotFound();
+        thread.IsSolved = true;
+        post.IsAcceptedAnswer = false;
+        post.User.Reputation -= 15;
+        thread.User.Reputation -= 2;
+        _context.SaveChanges();
+        return RedirectToAction(nameof(Detail), new { id });
+    }
 }

@@ -87,10 +87,6 @@
                     aria-label="Downvote question"
                     aria-pressed="@(questionVote == -1 ? "true" : "false")">▼</button>
             <span class="vote-error text-danger" data-vote-error role="alert" hidden></span>
-            @if (Model.IsSolved)
-            {
-                <div class="accepted-mark" title="Solved" aria-label="Solved">✓</div>
-            }
         </aside>
 
         <div class="post-body">

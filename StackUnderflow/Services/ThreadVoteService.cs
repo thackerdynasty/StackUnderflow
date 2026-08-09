@@ -4,11 +4,9 @@ using StackUnderflow.Models;
 
 namespace StackUnderflow.Services;
 
-public class ThreadVoteService
+public class ThreadVoteService(ApplicationDbContext context)
 {
-    private readonly ApplicationDbContext _context;
-
-    public ThreadVoteService(ApplicationDbContext context) => _context = context;
+    private readonly ApplicationDbContext _context = context;
 
     public static int? ParseVoteValue(string vote) => vote switch
     {

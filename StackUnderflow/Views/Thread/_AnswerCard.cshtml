@@ -119,6 +119,17 @@
                         aria-label="Mark as accepted answer">Accept Answer</button>
             </form>
         }
+        @if (isThreadOwner && post.IsAcceptedAnswer)
+        {
+            <form asp-controller="Thread" asp-action="UnacceptAnswer" asp-route-id="@threadId" asp-route-postId="@post.Id" method="post">
+                @Html.AntiForgeryToken()
+                <button type="submit"
+                        class="btn btn-secondary"
+                        style="background-color: gray; outline-color: gray; border-color: gray;"
+                        title="Unmark as accepted answer"
+                        aria-label="Unmark as accepted answer">Unaccept Answer</button>
+            </form>
+        }
 
         <div class="comment-list">
             @foreach (var comment in comments)
