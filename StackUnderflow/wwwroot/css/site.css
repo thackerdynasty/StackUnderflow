@@ -636,6 +636,12 @@ body {
   white-space: pre-wrap;
 }
 
+/* Reserve room on the right of code blocks so the absolutely positioned
+   save bookmark (.save-form) is not overlaid on top of the code box. */
+.thread-post:has(.save-form) .post-content pre {
+  margin-right: 2.5rem;
+}
+
 .post-footer {
   display: flex;
   align-items: flex-start;

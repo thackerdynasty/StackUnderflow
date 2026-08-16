@@ -5,22 +5,58 @@ using StackUnderflow.Data;
 using StackUnderflow.Models;
 using StackUnderflow.Services;
 using System.Security.Claims;
+using StackUnderflow.Utilities;
+using System.Text.RegularExpressions;
 
 namespace StackUnderflow.Controllers;
 
-public class ThreadController : Controller
+public partial class ThreadController : Controller
 {
     private readonly ApplicationDbContext _context;
     private readonly ThreadVoteService _voteService;
     private readonly PostVoteService _postVoteService;
-
-    public ThreadController(ApplicationDbContext context, ThreadVoteService voteService, PostVoteService postVoteService)
+    private readonly ContentSafetyAnalyzer _contentSafetyAnalyzer;
+    
+    public ThreadController(ApplicationDbContext context, ThreadVoteService voteService, PostVoteService postVoteService, ContentSafetyAnalyzer contentSafetyAnalyzer)
     {
         _context = context;
         _voteService = voteService;
         _postVoteService = postVoteService;
+        _contentSafetyAnalyzer = ContentSafetyAnalyzer
     }
-    
+
+    [GeneratedRegex(@"^[a-z0-9][a-z0-9+#.\-]{0,24}$")]
+    private static partial Regex TagNameRegex();
+
+    private const int MaxTags = 5;
+
+    private string? ApplyTags(SUThread thread, string tags)
+    {
+        var submitted = (tags ?? "")
+            .Split([',', ' '], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Select(n => n.ToLowerInvariant())
+            .Distinct()
+            .ToList();
+
+        var valid = submitted.Where(n => TagNameRegex().IsMatch(n)).ToList();
+        var rejectedCount = submitted.Count - valid.Count;
+
+        foreach (var name in valid.Take(MaxTags))
+        {
+            var tag = _context.Tags.FirstOrDefault(t => t.Name == name)
+                    ?? new Tag { Name = name };
+            thread.ThreadTags.Add(new ThreadTag { Tag = tag });
+        }
+
+        var warnings = new List<string>();
+        if (rejectedCount > 0)
+            warnings.Add($"{rejectedCount} tag{(rejectedCount == 1 ? " was" : "s were")} ignored: tags may only contain lowercase letters, numbers, and + # . - (max 25 characters).");
+        if (valid.Count > MaxTags)
+            warnings.Add($"Only the first {MaxTags} tags were kept.");
+
+        return warnings.Count > 0 ? string.Join(" ", warnings) : null;
+    }
+
     // GET
     public IActionResult Index()
     {
@@ -35,12 +71,21 @@ public class ThreadController : Controller
 
     [Authorize]
     [HttpPost]
+    [ValidateAntiForgeryToken]
     [Route("/Thread/Create")]
-    public IActionResult Create(string title, string content)
+    public IActionResult Create(string title, string content, string threadTags)
     {
+        System.Diagnostics.Debug.WriteLine($"Creating thread with title: {title}, content: {content}, tags: {threadTags}");
         if (string.IsNullOrWhiteSpace(title) || string.IsNullOrWhiteSpace(content))
         {
             TempData["Error"] = "Title and content are required.";
+            return RedirectToAction(nameof(Create));
+        }
+        var (isSafe, _) = _contentSafetyAnalyzer.CheckText(content);
+        var (isTitleSafe, _) = _contentSafetyAnalyzer.CheckText(title);
+        if (!isSafe || !isTitleSafe)
+        {
+            TempData["Error"] = "Content is not safe.";
             return RedirectToAction(nameof(Create));
         }
         var thread = new SUThread
@@ -54,8 +99,10 @@ public class ThreadController : Controller
             ViewCount = 0,
             IsSolved = false,
             UserId = User.FindFirst(ClaimTypes.NameIdentifier)!.Value,
-            Posts = new List<Post>()
+            Posts = new List<Post>(),
         };
+        
+        TempData["TagWarning"] = ApplyTags(thread, threadTags);
         _context.SUThreads.Add(thread);
         _context.SaveChanges();
         return RedirectToAction(nameof(Detail), new { id = thread.Id });
@@ -64,7 +111,10 @@ public class ThreadController : Controller
     [Route("/Thread/{id}/Edit")]
     public IActionResult Edit(int id)
     {
-        var thread = _context.SUThreads.FirstOrDefault(t => t.Id == id);
+        var thread = _context.SUThreads
+            .Include(t => t.ThreadTags)
+            .ThenInclude(tt => tt.Tag)
+            .FirstOrDefault(t => t.Id == id);
         if (thread == null)
             return NotFound();
         if (thread.UserId != User.FindFirst(ClaimTypes.NameIdentifier)?.Value)
@@ -74,10 +124,14 @@ public class ThreadController : Controller
 
     [Authorize]
     [HttpPost]
+    [ValidateAntiForgeryToken]
     [Route("/Thread/{id}/Edit")]
-    public IActionResult Edit(int id, string title, string content)
+    public IActionResult Edit(int id, string title, string content, string threadTags)
     {
-        var thread = _context.SUThreads.FirstOrDefault(t => t.Id == id);
+        var thread = _context.SUThreads
+            .Include(t => t.ThreadTags)
+            .ThenInclude(tt => tt.Tag)
+            .FirstOrDefault(t => t.Id == id);
         if (thread == null)
             return NotFound();
         if (thread.UserId != User.FindFirst(ClaimTypes.NameIdentifier)?.Value)
@@ -87,9 +141,18 @@ public class ThreadController : Controller
             TempData["Error"] = "Title and content are required.";
             return RedirectToAction(nameof(Edit), new { id });
         }
+        var (isSafe, _) = _contentSafetyAnalyzer.CheckText(content);
+        var (isTitleSafe, _) = _contentSafetyAnalyzer.CheckText(title);
+        if (!isSafe || !isTitleSafe)
+        {
+            TempData["Error"] = "Title or content is not safe.";
+            return RedirectToAction(nameof(Edit), new { id });
+        }
         thread.Title = title.Trim();
         thread.Content = content.Trim();
         thread.UpdatedAt = DateTime.UtcNow;
+        thread.ThreadTags.Clear();
+        TempData["TagWarning"] = ApplyTags(thread, threadTags);
 
         _context.SaveChanges();
 
@@ -139,9 +202,6 @@ public class ThreadController : Controller
     }
 
     private const int AnswersPageSize = 5;
-
-    // Answers ordered for display: accepted first, then by score, then oldest.
-    // Id is a stable tiebreak so paged slices don't overlap or skip.
     private IQueryable<Post> OrderedAnswers(int threadId) =>
         _context.Posts
             .Where(p => p.SUThreadId == threadId)
@@ -155,6 +215,13 @@ public class ThreadController : Controller
     {
         var thread = _context.SUThreads
             .Include(t => t.User)
+            .Include(t => t.Posts)
+            .ThenInclude(p => p.User)
+            .Include(t => t.Posts)
+            .ThenInclude(p => p.Comments)
+            .ThenInclude(c => c.User)
+            .Include(t => t.ThreadTags)
+            .ThenInclude(tt => tt.Tag)
             .FirstOrDefault(t => t.Id == id);
 
         if (thread == null)
@@ -190,7 +257,6 @@ public class ThreadController : Controller
 
         _context.SaveChanges();
 
-        // Load only the first page of answers; the rest arrive via the Answers endpoint.
         ViewBag.TotalAnswers = _context.Posts.Count(p => p.SUThreadId == id);
         ViewBag.AnswersPageSize = AnswersPageSize;
         ViewBag.AnswersCurrentPage = 1;
@@ -205,7 +271,6 @@ public class ThreadController : Controller
         return View(thread);
     }
 
-    // Returns a rendered partial with one page of answers for the "Load more answers" button.
     [Route("/Thread/{id}/Answers")]
     public IActionResult Answers(int id, int page = 1, int pageSize = AnswersPageSize)
     {
@@ -261,6 +326,13 @@ public class ThreadController : Controller
         if (string.IsNullOrWhiteSpace(content))
         {
             TempData["AnswerError"] = "Answer content is required.";
+            return RedirectToAction(nameof(Detail), new { id });
+        }
+
+        var (isSafe, _) = _contentSafetyAnalyzer.CheckText(content);
+        if (!isSafe)
+        {
+            TempData["AnswerError"] = "Content is not safe.";
             return RedirectToAction(nameof(Detail), new { id });
         }
 
@@ -336,6 +408,13 @@ public class ThreadController : Controller
         if (!postExists)
             return NotFound();
 
+        var (isSafe, _) = _contentSafetyAnalyzer.CheckText(content);
+        if (!isSafe)
+        {
+            TempData["CommentError"] = "Content is not safe.";
+            return RedirectToAction(nameof(Detail), new { id });
+        }
+
         var comment = new Comment
         {
             Content = content.Trim(),
@@ -369,6 +448,13 @@ public class ThreadController : Controller
         if (string.IsNullOrWhiteSpace(content))
         {
             TempData["CommentEditError"] = "Comment content is required.";
+            return RedirectToAction(nameof(Detail), new { id = threadId, editCommentId = commentId });
+        }
+
+        var (isSafe, _) = _contentSafetyAnalyzer.CheckText(content);
+        if (!isSafe)
+        {
+            TempData["CommentEditError"] = "Content is not safe.";
             return RedirectToAction(nameof(Detail), new { id = threadId, editCommentId = commentId });
         }
 
@@ -460,6 +546,13 @@ public class ThreadController : Controller
         if (post.UserId != userId)
             return Forbid();
 
+        var (isSafe, _) = _contentSafetyAnalyzer.CheckText(content);
+        if (!isSafe)
+        {
+            TempData["PostEditError"] = "Content is not safe.";
+            return RedirectToAction(nameof(Detail), new { id = threadId, editPostId = postId });
+        }
+
         post.Content = content.Trim();
         post.UpdatedAt = DateTime.UtcNow;
         _context.SaveChanges();
@@ -513,4 +606,7 @@ public class ThreadController : Controller
         _context.SaveChanges();
         return RedirectToAction(nameof(Detail), new { id });
     }
+
+    [GeneratedRegex(@"^[a-z0-9][a-z0-9+#.\-]{0,24}$", RegexOptions.Compiled)]
+    private static partial Regex MyRegex();
 }

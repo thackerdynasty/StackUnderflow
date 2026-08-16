@@ -6,13 +6,6 @@
     var currentPage = (int)(ViewData["CurrentPage"] ?? 1);
     var totalPages = (int)(ViewData["TotalPages"] ?? 1);
     var pageSize = (int)(ViewData["PageSize"] ?? 10);
-
-    static string LeaderName(User user)
-    {
-        var name = user.UserName ?? user.Email ?? "User";
-        var at = name.IndexOf('@');
-        return at > 0 ? name[..at] : name;
-    }
 }
 
 <section class="questions-shell">
@@ -24,31 +17,29 @@
         <a asp-controller="Thread" asp-action="Create" class="btn btn-primary ask-button">Ask Question</a>
     </div>
 
-    @if (Model.TopUsers.Count > 0)
-    {
-        <section class="leaderboard" aria-label="Top users by reputation">
-            <h2 class="leaderboard-title">Top Users</h2>
-            <ol class="leaderboard-list">
-                @{ var rank = 0; }
-                @foreach (var user in Model.TopUsers)
-                {
-                    rank++;
-                    var leaderName = LeaderName(user);
-                    var initials = string.IsNullOrEmpty(leaderName) ? "?" : leaderName[..1].ToUpperInvariant();
-                    <li class="leaderboard-entry rank-@rank">
-                        <span class="leaderboard-rank" aria-label="Rank @rank">@rank</span>
-                        <span class="leaderboard-avatar">@initials</span>
-                        <div class="leaderboard-info">
-                            <a class="leaderboard-name"
-                               asp-controller="Profile" asp-action="Details" asp-route-id="@user.Id"
-                               data-profile-card-user-id="@user.Id">@leaderName</a>
-                            <span class="leaderboard-rep">@user.Reputation reputation</span>
-                        </div>
-                    </li>
-                }
-            </ol>
-        </section>
-    }
+    <section class="leaderboard" id="leaderboard" aria-label="Top users by saved threads"
+             data-leaderboard-url="@Url.Action("Leaderboard", "SavedThreadApi")"
+             data-profile-url-template="@Url.Action("Details", "Profile", new { id = "__ID__" })"
+             @(Model.Leaderboard.Count == 0 ? "hidden" : "")>
+        <h2 class="leaderboard-title">Top Users</h2>
+        <ol class="leaderboard-list" id="leaderboard-list">
+            @{ var rank = 0; }
+            @foreach (var entry in Model.Leaderboard)
+            {
+                rank++;
+                <li class="leaderboard-entry rank-@rank">
+                    <span class="leaderboard-rank" aria-label="Rank @rank">@rank</span>
+                    <span class="leaderboard-avatar">@entry.Initials</span>
+                    <div class="leaderboard-info">
+                        <a class="leaderboard-name"
+                           asp-controller="Profile" asp-action="Details" asp-route-id="@entry.UserId"
+                           data-profile-card-user-id="@entry.UserId">@entry.Name</a>
+                        <span class="leaderboard-rep">@entry.SaveCount @(entry.SaveCount == 1 ? "save" : "saves")</span>
+                    </div>
+                </li>
+            }
+        </ol>
+    </section>
     
     <div class="question-toolbar">
         <div class="question-search">
@@ -108,6 +99,15 @@
                         <h2>
                             <a asp-controller="Thread" asp-action="Detail" asp-route-id="@thread.Id">@thread.Title</a>
                         </h2>
+                        @if (thread.ThreadTags?.Count > 0)
+                        {
+                            <div class="question-tags">
+                                @foreach (var threadTag in thread.ThreadTags)
+                                {
+                                    <span class="badge bg-secondary">@threadTag.Tag?.Name</span>
+                                }
+                            </div>
+                        }
                         <p>@Html.Raw(ContentParser.RenderCodeBlocks(excerpt))</p>
                         <div class="question-meta">
                             @if (thread.IsSolved)

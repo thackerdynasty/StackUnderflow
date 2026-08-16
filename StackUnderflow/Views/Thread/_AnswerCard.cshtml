@@ -171,6 +171,10 @@
             }
             <form asp-action="PostComment" asp-route-id="@threadId" asp-route-postId="@post.Id" method="post">
                 @Html.AntiForgeryToken()
+                @if (TempData["CommentError"] is string commentError)
+                {
+                    <div class="text-danger answer-error">@commentError</div>
+                }
                 <textarea id="comment-content-@post.Id" name="content" class="form-control-sm" placeholder="Your comment..." style="margin-top: 8px;"></textarea>
                 <br/>
                 <button type="submit" class="btn btn-secondary btn-sm">Add comment</button>

@@ -20,6 +20,7 @@
         .OrderByDescending(post => post.IsAcceptedAnswer);
 
     bool isThreadOwner = User.Identity?.IsAuthenticated == true && Model.UserId == currentUserId;
+    bool isSaved = ViewBag.IsSaved is true;
 
     // Answers are ordered server-side; Model.Posts already holds only the first page.
     var posts = (Model.Posts ?? Array.Empty<Post>()).ToList();
@@ -44,6 +45,10 @@
 }
 
 <section class="thread-detail">
+    @if (TempData["TagWarning"] is string tagWarning)
+    {
+        <div class="alert alert-warning" role="alert">@tagWarning</div>
+    }
     <header class="thread-header">
         <div>
             <h1>@Model.Title</h1>
@@ -51,6 +56,12 @@
                 <span>Asked @Model.CreatedAt.ToString("MMM d, yyyy")</span>
                 <span>Modified @Model.UpdatedAt.ToString("MMM d, yyyy")</span>
                 <span>Viewed @Model.ViewCount @(Model.ViewCount == 1 ? "time" : "times")</span>
+            </div>
+            <div class="thread-tags">
+                @foreach (var threadTag in Model.ThreadTags ?? Array.Empty<ThreadTag>())
+                {
+                    <span class="badge bg-secondary">@threadTag.Tag?.Name</span>
+                }
             </div>
         </div>
     </header>
@@ -87,6 +98,46 @@
                     aria-label="Downvote question"
                     aria-pressed="@(questionVote == -1 ? "true" : "false")">▼</button>
             <span class="vote-error text-danger" data-vote-error role="alert" hidden></span>
+        @if (User.Identity?.IsAuthenticated == true)
+        {
+            <div class="save-form">
+                <button type="button" class="save-control @(isSaved ? "is-saved" : "")"
+                        data-save-thread-id="@Model.Id"
+                        aria-pressed="@(isSaved ? "true" : "false")"
+                        title="@(isSaved ? "Remove from your saved threads" : "Save this thread to your profile")"
+                        aria-label="@(isSaved ? "Remove from your saved threads" : "Save this thread to your profile")">
+                    <svg class="save-icon" viewBox="0 0 24 24" width="24" height="24" aria-hidden="true" focusable="false">
+                        <path d="M6 2h12a1 1 0 0 1 1 1v19l-7-4.2L5 22V3a1 1 0 0 1 1-1z" />
+                    </svg>
+                </button>
+            </div>
+        }
+        <aside class="vote-column" aria-label="Question score">
+            <form asp-controller="Thread" asp-action="VoteQuestion" asp-route-id="@Model.Id" method="post" class="vote-form">
+                @if (isThreadOwner)
+                {
+                    <button type="submit" name="vote" value="up" class="vote-control @(questionVote == 1 ? "is-selected" : "")" aria-label="Upvote question" disabled>▲</button>
+                }
+                else
+                {
+                    <button type="submit" name="vote" value="up" class="vote-control @(questionVote == 1 ? "is-selected" : "")" aria-label="Upvote question">▲</button>
+                }
+            </form>
+            <strong>@questionScore</strong>
+            <form asp-controller="Thread" asp-action="VoteQuestion" asp-route-id="@Model.Id" method="post" class="vote-form">
+                @if (isThreadOwner)
+                {
+                    <button type="submit" name="vote" value="down" class="vote-control @(questionVote == -1 ? "is-selected" : "")" aria-label="Downvote question" disabled>▼</button>
+                }
+                else
+                {
+                    <button type="submit" name="vote" value="down" class="vote-control @(questionVote == -1 ? "is-selected" : "")" aria-label="Downvote question">▼</button>
+                }
+            </form>
+            @if (Model.IsSolved)
+            {
+                <div class="accepted-mark" title="Solved" aria-label="Solved">✓</div>
+            }
         </aside>
 
         <div class="post-body">
