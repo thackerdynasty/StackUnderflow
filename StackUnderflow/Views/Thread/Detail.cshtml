@@ -67,19 +67,6 @@
     </header>
 
     <article class="thread-post">
-        @* @if (User.Identity?.IsAuthenticated == true) *@
-        @* { *@
-        @*     <form asp-controller="Thread" asp-action="ToggleSave" asp-route-id="@Model.Id" method="post" class="save-form"> *@
-        @*         <button type="submit" class="save-control @(isSaved ? "is-saved" : "")" *@
-        @*                 title="@(isSaved ? "Remove from your saved threads" : "Save this thread to your profile")" *@
-        @*                 aria-label="@(isSaved ? "Remove from your saved threads" : "Save this thread to your profile")" *@
-        @*                 aria-pressed="@(isSaved ? "true" : "false")"> *@
-        @*             <svg class="save-icon" viewBox="0 0 24 24" width="24" height="24" aria-hidden="true" focusable="false"> *@
-        @*                 <path d="M6 2h12a1 1 0 0 1 1 1v19l-7-4.2L5 22V3a1 1 0 0 1 1-1z" /> *@
-        @*             </svg> *@
-        @*         </button> *@
-        @*     </form> *@
-        @* } *@
         <aside class="vote-column" aria-label="Question score"
                data-vote
                data-vote-endpoint="/api/Thread/@Model.Id/vote"
@@ -98,6 +85,12 @@
                     aria-label="Downvote question"
                     aria-pressed="@(questionVote == -1 ? "true" : "false")">▼</button>
             <span class="vote-error text-danger" data-vote-error role="alert" hidden></span>
+            @if (Model.IsSolved)
+            {
+                <div class="accepted-mark" title="Solved" aria-label="Solved">✓</div>
+            }
+        </aside>
+
         @if (User.Identity?.IsAuthenticated == true)
         {
             <div class="save-form">
@@ -112,33 +105,6 @@
                 </button>
             </div>
         }
-        <aside class="vote-column" aria-label="Question score">
-            <form asp-controller="Thread" asp-action="VoteQuestion" asp-route-id="@Model.Id" method="post" class="vote-form">
-                @if (isThreadOwner)
-                {
-                    <button type="submit" name="vote" value="up" class="vote-control @(questionVote == 1 ? "is-selected" : "")" aria-label="Upvote question" disabled>▲</button>
-                }
-                else
-                {
-                    <button type="submit" name="vote" value="up" class="vote-control @(questionVote == 1 ? "is-selected" : "")" aria-label="Upvote question">▲</button>
-                }
-            </form>
-            <strong>@questionScore</strong>
-            <form asp-controller="Thread" asp-action="VoteQuestion" asp-route-id="@Model.Id" method="post" class="vote-form">
-                @if (isThreadOwner)
-                {
-                    <button type="submit" name="vote" value="down" class="vote-control @(questionVote == -1 ? "is-selected" : "")" aria-label="Downvote question" disabled>▼</button>
-                }
-                else
-                {
-                    <button type="submit" name="vote" value="down" class="vote-control @(questionVote == -1 ? "is-selected" : "")" aria-label="Downvote question">▼</button>
-                }
-            </form>
-            @if (Model.IsSolved)
-            {
-                <div class="accepted-mark" title="Solved" aria-label="Solved">✓</div>
-            }
-        </aside>
 
         <div class="post-body">
             <div class="post-content">@Html.Raw(ContentParser.RenderCodeBlocks(Model.Content))</div>
