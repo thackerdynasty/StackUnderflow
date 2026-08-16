@@ -22,7 +22,7 @@ public partial class ThreadController : Controller
         _context = context;
         _voteService = voteService;
         _postVoteService = postVoteService;
-        _contentSafetyAnalyzer = ContentSafetyAnalyzer
+        _contentSafetyAnalyzer = contentSafetyAnalyzer;
     }
 
     [GeneratedRegex(@"^[a-z0-9][a-z0-9+#.\-]{0,24}$")]
