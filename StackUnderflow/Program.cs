@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using StackUnderflow.Data;
@@ -18,6 +19,7 @@ builder.Services.AddDefaultIdentity<User>(options => options.SignIn.RequireConfi
     .AddEntityFrameworkStores<ApplicationDbContext>();
 builder.Services.AddControllersWithViews();
 builder.Services.AddSingleton<ContentSafetyAnalyzer>();
+builder.Services.AddScoped<IAuthorizationHandler, ModeratorUserHandler>();
 
 // Let fetch()-based API calls send the antiforgery token via a request header.
 builder.Services.AddAntiforgery(options => options.HeaderName = "RequestVerificationToken");
