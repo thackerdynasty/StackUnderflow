@@ -3,15 +3,27 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using StackUnderflow.Data;
 using StackUnderflow.Models;
+using StackUnderflow.Services;
 using System.Security.Claims;
+using StackUnderflow.Utilities;
 using System.Text.RegularExpressions;
 
 namespace StackUnderflow.Controllers;
 
-public partial class ThreadController(ApplicationDbContext context) : Controller
+public partial class ThreadController : Controller
 {
-
-    private readonly ApplicationDbContext _context = context;
+    private readonly ApplicationDbContext _context;
+    private readonly ThreadVoteService _voteService;
+    private readonly PostVoteService _postVoteService;
+    private readonly ContentSafetyAnalyzer _contentSafetyAnalyzer;
+    
+    public ThreadController(ApplicationDbContext context, ThreadVoteService voteService, PostVoteService postVoteService, ContentSafetyAnalyzer contentSafetyAnalyzer)
+    {
+        _context = context;
+        _voteService = voteService;
+        _postVoteService = postVoteService;
+        _contentSafetyAnalyzer = ContentSafetyAnalyzer
+    }
 
     [GeneratedRegex(@"^[a-z0-9][a-z0-9+#.\-]{0,24}$")]
     private static partial Regex TagNameRegex();
@@ -59,6 +71,7 @@ public partial class ThreadController(ApplicationDbContext context) : Controller
 
     [Authorize]
     [HttpPost]
+    [ValidateAntiForgeryToken]
     [Route("/Thread/Create")]
     public IActionResult Create(string title, string content, string threadTags)
     {
@@ -66,6 +79,13 @@ public partial class ThreadController(ApplicationDbContext context) : Controller
         if (string.IsNullOrWhiteSpace(title) || string.IsNullOrWhiteSpace(content))
         {
             TempData["Error"] = "Title and content are required.";
+            return RedirectToAction(nameof(Create));
+        }
+        var (isSafe, _) = _contentSafetyAnalyzer.CheckText(content);
+        var (isTitleSafe, _) = _contentSafetyAnalyzer.CheckText(title);
+        if (!isSafe || !isTitleSafe)
+        {
+            TempData["Error"] = "Content is not safe.";
             return RedirectToAction(nameof(Create));
         }
         var thread = new SUThread
@@ -104,6 +124,7 @@ public partial class ThreadController(ApplicationDbContext context) : Controller
 
     [Authorize]
     [HttpPost]
+    [ValidateAntiForgeryToken]
     [Route("/Thread/{id}/Edit")]
     public IActionResult Edit(int id, string title, string content, string threadTags)
     {
@@ -118,6 +139,13 @@ public partial class ThreadController(ApplicationDbContext context) : Controller
         if (string.IsNullOrWhiteSpace(title) || string.IsNullOrWhiteSpace(content))
         {
             TempData["Error"] = "Title and content are required.";
+            return RedirectToAction(nameof(Edit), new { id });
+        }
+        var (isSafe, _) = _contentSafetyAnalyzer.CheckText(content);
+        var (isTitleSafe, _) = _contentSafetyAnalyzer.CheckText(title);
+        if (!isSafe || !isTitleSafe)
+        {
+            TempData["Error"] = "Title or content is not safe.";
             return RedirectToAction(nameof(Edit), new { id });
         }
         thread.Title = title.Trim();
@@ -147,11 +175,27 @@ public partial class ThreadController(ApplicationDbContext context) : Controller
     [Route("/Thread/{id}/Delete")]
     public IActionResult DeleteConfirmed(int id)
     {
-        var thread = _context.SUThreads.FirstOrDefault(t => t.Id == id);
+        var thread = _context.SUThreads
+            .Include(t => t.Posts)
+                .ThenInclude(p => p.Comments)
+            .Include(t => t.Posts)
+                .ThenInclude(p => p.Votes)
+            .Include(t => t.SavedBy)
+            .FirstOrDefault(t => t.Id == id);
         if (thread == null)
             return NotFound();
         if (thread.UserId != User.FindFirst(ClaimTypes.NameIdentifier)?.Value)
             return Forbid();
+
+        // Posts and SavedThreads use NoAction on the thread FK, so their rows must
+        // be removed explicitly before the thread. ThreadVotes cascade automatically.
+        foreach (var post in thread.Posts)
+        {
+            _context.Comments.RemoveRange(post.Comments);
+            _context.PostVotes.RemoveRange(post.Votes);
+        }
+        _context.Posts.RemoveRange(thread.Posts);
+        _context.SavedThreads.RemoveRange(thread.SavedBy);
         _context.SUThreads.Remove(thread);
         _context.SaveChanges();
         return Redirect("/");
@@ -285,6 +329,13 @@ public partial class ThreadController(ApplicationDbContext context) : Controller
             return RedirectToAction(nameof(Detail), new { id });
         }
 
+        var (isSafe, _) = _contentSafetyAnalyzer.CheckText(content);
+        if (!isSafe)
+        {
+            TempData["AnswerError"] = "Content is not safe.";
+            return RedirectToAction(nameof(Detail), new { id });
+        }
+
         var threadExists = _context.SUThreads.Any(t => t.Id == id);
         if (!threadExists)
             return NotFound();
@@ -357,6 +408,13 @@ public partial class ThreadController(ApplicationDbContext context) : Controller
         if (!postExists)
             return NotFound();
 
+        var (isSafe, _) = _contentSafetyAnalyzer.CheckText(content);
+        if (!isSafe)
+        {
+            TempData["CommentError"] = "Content is not safe.";
+            return RedirectToAction(nameof(Detail), new { id });
+        }
+
         var comment = new Comment
         {
             Content = content.Trim(),
@@ -393,6 +451,13 @@ public partial class ThreadController(ApplicationDbContext context) : Controller
             return RedirectToAction(nameof(Detail), new { id = threadId, editCommentId = commentId });
         }
 
+        var (isSafe, _) = _contentSafetyAnalyzer.CheckText(content);
+        if (!isSafe)
+        {
+            TempData["CommentEditError"] = "Content is not safe.";
+            return RedirectToAction(nameof(Detail), new { id = threadId, editCommentId = commentId });
+        }
+
         comment.Content = content.Trim();
         comment.UpdatedAt = DateTime.UtcNow;
         _context.SaveChanges();
@@ -426,48 +491,19 @@ public partial class ThreadController(ApplicationDbContext context) : Controller
     [HttpPost]
     [ValidateAntiForgeryToken]
     [Route("/Thread/{id}/Vote")]
-    public IActionResult VoteQuestion(int id, string vote)
+    public async Task<IActionResult> VoteQuestion(int id, string vote)
     {
-        var voteValue = ParseVoteValue(vote);
+        var voteValue = ThreadVoteService.ParseVoteValue(vote);
         if (voteValue == null)
             return BadRequest();
 
-        var thread = _context.SUThreads
-            .Include(t => t.User)
-            .FirstOrDefault(t => t.Id == id);
-        if (thread == null)
+        var userId = User.FindFirst(ClaimTypes.NameIdentifier)!.Value;
+        var outcome = await _voteService.VoteAsync(id, userId, voteValue.Value);
+        if (outcome.Status == ThreadVoteStatus.ThreadNotFound)
             return NotFound();
 
-        var userId = User.FindFirst(ClaimTypes.NameIdentifier)!.Value;
-        var existingVote = _context.ThreadVotes.FirstOrDefault(v => v.UserId == userId && v.SUThreadId == id);
-
-        if (existingVote == null)
-        {
-            ApplyThreadVote(thread, voteValue.Value);
-            _context.ThreadVotes.Add(new ThreadVote
-            {
-                Value = voteValue.Value,
-                CreatedAt = DateTime.UtcNow,
-                UpdatedAt = DateTime.UtcNow,
-                UserId = userId,
-                SUThreadId = id
-            });
-        }
-        else if (existingVote.Value != voteValue.Value)
-        {
-            RevertThreadVote(thread, existingVote.Value);
-            ApplyThreadVote(thread, voteValue.Value);
-            existingVote.Value = voteValue.Value;
-            existingVote.UpdatedAt = DateTime.UtcNow;
-        }
-        else
-        {
-            RevertThreadVote(thread, existingVote.Value);
-            _context.ThreadVotes.Remove(existingVote);
-        }
-
-        _context.SaveChanges();
-
+        // Self-votes are blocked in the UI (buttons are disabled), so we just
+        // redirect back rather than surfacing an error page.
         return RedirectToAction(nameof(Detail), new { id });
     }
 
@@ -475,48 +511,18 @@ public partial class ThreadController(ApplicationDbContext context) : Controller
     [HttpPost]
     [ValidateAntiForgeryToken]
     [Route("/Thread/{threadId}/Answer/{postId}/Vote")]
-    public IActionResult VoteAnswer(int threadId, int postId, string vote)
+    public async Task<IActionResult> VoteAnswer(int threadId, int postId, string vote)
     {
-        var voteValue = ParseVoteValue(vote);
+        var voteValue = PostVoteService.ParseVoteValue(vote);
         if (voteValue == null)
             return BadRequest();
 
-        var post = _context.Posts
-            .Include(p => p.User)
-            .FirstOrDefault(p => p.Id == postId && p.SUThreadId == threadId);
-        if (post == null)
+        var userId = User.FindFirst(ClaimTypes.NameIdentifier)!.Value;
+        var outcome = await _postVoteService.VoteAsync(postId, userId, voteValue.Value);
+        if (outcome.Status == PostVoteStatus.PostNotFound)
             return NotFound();
 
-        var userId = User.FindFirst(ClaimTypes.NameIdentifier)!.Value;
-        var existingVote = _context.PostVotes.FirstOrDefault(v => v.UserId == userId && v.PostId == postId);
-
-        if (existingVote == null)
-        {
-            ApplyPostVote(post, voteValue.Value);
-            _context.PostVotes.Add(new PostVote
-            {
-                Value = voteValue.Value,
-                CreatedAt = DateTime.UtcNow,
-                UpdatedAt = DateTime.UtcNow,
-                UserId = userId,
-                PostId = postId
-            });
-        }
-        else if (existingVote.Value != voteValue.Value)
-        {
-            RevertPostVote(post, existingVote.Value);
-            ApplyPostVote(post, voteValue.Value);
-            existingVote.Value = voteValue.Value;
-            existingVote.UpdatedAt = DateTime.UtcNow;
-        }
-        else
-        {
-            RevertPostVote(post, existingVote.Value);
-            _context.PostVotes.Remove(existingVote);
-        }
-
-        _context.SaveChanges();
-
+        // Self-votes are surfaced in the UI; here we just redirect back.
         return RedirectToAction(nameof(Detail), new { id = threadId });
     }
 
@@ -540,6 +546,13 @@ public partial class ThreadController(ApplicationDbContext context) : Controller
         if (post.UserId != userId)
             return Forbid();
 
+        var (isSafe, _) = _contentSafetyAnalyzer.CheckText(content);
+        if (!isSafe)
+        {
+            TempData["PostEditError"] = "Content is not safe.";
+            return RedirectToAction(nameof(Detail), new { id = threadId, editPostId = postId });
+        }
+
         post.Content = content.Trim();
         post.UpdatedAt = DateTime.UtcNow;
         _context.SaveChanges();
@@ -547,74 +560,6 @@ public partial class ThreadController(ApplicationDbContext context) : Controller
         return RedirectToAction(nameof(Detail), new { id = threadId });
     }
 
-
-    private static int? ParseVoteValue(string vote)
-    {
-        return vote switch
-        {
-            "up" => 1,
-            "down" => -1,
-            _ => null
-        };
-    }
-
-    private static void ApplyThreadVote(SUThread thread, int voteValue)
-    {
-        if (voteValue > 0)
-        {
-            thread.UpvoteCount++;
-            User user = thread.User;
-            user.Reputation += 10;
-        }
-        else
-        {
-            thread.DownvoteCount++;
-            User user = thread.User;
-            user.Reputation -= 2;
-        }
-    }
-
-    private static void RevertThreadVote(SUThread thread, int voteValue)
-    {
-        if (voteValue > 0)
-        {
-            thread.UpvoteCount = Math.Max(0, thread.UpvoteCount - 1);
-            thread.User.Reputation -= 10;
-        }
-        else
-        {
-            thread.DownvoteCount = Math.Max(0, thread.DownvoteCount - 1);
-            thread.User.Reputation += 2;
-        }
-    }
-
-    private static void ApplyPostVote(Post post, int voteValue)
-    {
-        if (voteValue > 0)
-        {
-            post.Upvotes++;
-            post.User.Reputation += 10;
-        }
-        else
-        {
-            post.Downvotes++;
-            post.User.Reputation -= 2;
-        }
-    }
-
-    private static void RevertPostVote(Post post, int voteValue)
-    {
-        if (voteValue > 0)
-        {
-            post.Upvotes = Math.Max(0, post.Upvotes - 1);
-            post.User.Reputation -= 10;
-        }
-        else
-        {
-            post.Downvotes = Math.Max(0, post.Downvotes - 1);
-            post.User.Reputation += 2;
-        }
-    }
 
     [Authorize]
     [HttpPost]
@@ -630,8 +575,34 @@ public partial class ThreadController(ApplicationDbContext context) : Controller
         if (thread == null || post == null) return NotFound();
         thread.IsSolved = true;
         post.IsAcceptedAnswer = true;
-        post.User.Reputation += 15;
-        thread.User.Reputation += 2;
+        if (post.UserId != thread.UserId)
+        {
+            post.User.Reputation += 15;
+            thread.User.Reputation += 2;
+        }
+        _context.SaveChanges();
+        return RedirectToAction(nameof(Detail), new { id });
+    }
+
+    [Authorize]
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public IActionResult UnacceptAnswer(int id, int postId)
+    {
+        var thread = _context.SUThreads
+            .Include(t => t.User)
+            .FirstOrDefault(t => t.Id == id);
+        var post =  _context.Posts
+            .Include(p => p.User)
+            .FirstOrDefault(p => p.Id == postId);
+        if (thread == null || post == null) return NotFound();
+        thread.IsSolved = false;
+        post.IsAcceptedAnswer = false;
+        if (post.UserId != thread.UserId)
+        {
+            post.User.Reputation -= 15;
+            thread.User.Reputation -= 2;
+        }
         _context.SaveChanges();
         return RedirectToAction(nameof(Detail), new { id });
     }

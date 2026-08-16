@@ -1,22 +1,21 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using StackUnderflow.Areas.Api.Models;
 using StackUnderflow.Data;
 using StackUnderflow.Extensions;
 using StackUnderflow.Models;
+using StackUnderflow.Services;
+using System.Security.Claims;
 
 namespace StackUnderflow.Areas.Api;
 
 [Route("api/[controller]")]
 [ApiController]
-public class ThreadController : ControllerBase
+public class ThreadController(ApplicationDbContext context, ThreadVoteService voteService) : ControllerBase
 {
-    private readonly ApplicationDbContext _context;
-
-    public ThreadController(ApplicationDbContext context)
-    {
-        _context = context;
-    }
+    private readonly ApplicationDbContext _context = context;
+    private readonly ThreadVoteService _voteService = voteService;
 
     // GET: api/Thread
     [HttpGet]
@@ -105,63 +104,98 @@ public class ThreadController : ControllerBase
 
     // PUT: api/Thread/5
     // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
-    [HttpPut("{id}")]
-    [Authorize]
-    public async Task<IActionResult> PutSUThread(int id, SUThread sUThread)
-    {
-        if (id != sUThread.Id)
-        {
-            return BadRequest();
-        }
-
-        _context.Entry(sUThread).State = EntityState.Modified;
-
-        try
-        {
-            await _context.SaveChangesAsync();
-        }
-        catch (DbUpdateConcurrencyException)
-        {
-            if (!SUThreadExists(id))
-            {
-                return NotFound();
-            }
-            else
-            {
-                throw;
-            }
-        }
-
-        return NoContent();
-    }
+    // [HttpPut("{id}")]
+    // [Authorize]
+    // public async Task<IActionResult> PutSUThread(int id, SUThread sUThread)
+    // {
+    //     if (id != sUThread.Id)
+    //     {
+    //         return BadRequest();
+    //     }
+    //
+    //     _context.Entry(sUThread).State = EntityState.Modified;
+    //
+    //     try
+    //     {
+    //         await _context.SaveChangesAsync();
+    //     }
+    //     catch (DbUpdateConcurrencyException)
+    //     {
+    //         if (!SUThreadExists(id))
+    //         {
+    //             return NotFound();
+    //         }
+    //         else
+    //         {
+    //             throw;
+    //         }
+    //     }
+    //
+    //     return NoContent();
+    // }
 
     // POST: api/Thread
     // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
-    [HttpPost]
-    [Authorize]
-    public async Task<ActionResult<SUThread>> PostSUThread(SUThread sUThread)
-    {
-        _context.SUThreads.Add(sUThread);
-        await _context.SaveChangesAsync();
-
-        return CreatedAtAction("GetSUThread", new { id = sUThread.Id }, sUThread);
-    }
+    // [HttpPost]
+    // [Authorize]
+    // public async Task<ActionResult<SUThread>> PostSUThread(SUThread sUThread)
+    // {
+    //     _context.SUThreads.Add(sUThread);
+    //     await _context.SaveChangesAsync();
+    //
+    //     return CreatedAtAction("GetSUThread", new { id = sUThread.Id }, sUThread);
+    // }
 
     // DELETE: api/Thread/5
-    [HttpDelete("{id}")]
+    // [HttpDelete("{id}")]
+    // [Authorize]
+    // public async Task<IActionResult> DeleteSUThread(int id)
+    // {
+    //     var sUThread = await _context.SUThreads.FindAsync(id);
+    //     if (sUThread == null)
+    //     {
+    //         return NotFound();
+    //     }
+    //
+    //     _context.SUThreads.Remove(sUThread);
+    //     await _context.SaveChangesAsync();
+    //
+    //     return NoContent();
+    // }
+
+    // POST: api/Thread/5/vote  ->  { "direction": "up" | "down" }
+    [HttpPost("{id}/vote")]
     [Authorize]
-    public async Task<IActionResult> DeleteSUThread(int id)
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<VoteResult>> Vote(int id, VoteRequest request, CancellationToken ct)
     {
-        var sUThread = await _context.SUThreads.FindAsync(id);
-        if (sUThread == null)
+        var value = ThreadVoteService.ParseVoteValue(request.Direction);
+        if (value is null)
         {
-            return NotFound();
+            return BadRequest("Direction must be 'up' or 'down'.");
         }
 
-        _context.SUThreads.Remove(sUThread);
-        await _context.SaveChangesAsync();
+        var userId = User.FindFirst(ClaimTypes.NameIdentifier)!.Value;
 
-        return NoContent();
+        var outcome = await _voteService.VoteAsync(id, userId, value.Value, ct);
+
+        return outcome.Status switch
+        {
+            ThreadVoteStatus.ThreadNotFound => NotFound(),
+            ThreadVoteStatus.SelfVoteNotAllowed =>
+                StatusCode(StatusCodes.Status403Forbidden, "You cannot vote on your own thread."),
+            _ => Ok(new VoteResult
+            {
+                ThreadId = outcome.ThreadId,
+                Score = outcome.Score,
+                UpvoteCount = outcome.UpvoteCount,
+                DownvoteCount = outcome.DownvoteCount,
+                UserVote = outcome.UserVote
+            })
+        };
     }
 
     private bool SUThreadExists(int id)

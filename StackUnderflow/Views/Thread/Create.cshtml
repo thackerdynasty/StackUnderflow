@@ -17,11 +17,6 @@
 
                         <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
 
-                        @if (TempData["Error"] is string error)
-                        {
-                            <div class="alert alert-danger" role="alert">@error</div>
-                        }
-
                         <div class="mb-3">
                             <label asp-for="Title" class="form-label">Title</label>
                             <input asp-for="Title" class="form-control" />
@@ -38,6 +33,11 @@
                             <h4 class="h6">Preview</h4>
                             <div id="thread-preview" class="card card-body" style="min-height: 6rem; white-space: pre-wrap;"></div>
                         </div>
+                        
+                        @if (TempData["Error"] is string error)
+                        {
+                            <div class="text-danger mt-3">@error</div>
+                        }
 
                         <div class="mb-3">
                             <label for="threadTags" class="form-label">Tags (comma-separated)</label>
