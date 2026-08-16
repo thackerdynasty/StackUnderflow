@@ -8,7 +8,8 @@ public class User : IdentityUser
     public DateTime JoinDate { get; set; }
     public Uri ProfilePicture { get; set; }
     public string Bio { get; set; }
-    
+    public bool IsModerator { get; set; } = false;
+
     public ICollection<Post> Posts { get; set; }
     public ICollection<Comment> Comments { get; set; }
     public ICollection<SUThread> SUThreads { get; set; }
