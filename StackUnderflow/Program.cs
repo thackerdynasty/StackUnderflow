@@ -16,6 +16,8 @@ builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 builder.Services.AddDefaultIdentity<User>(options => options.SignIn.RequireConfirmedAccount = true)
     .AddEntityFrameworkStores<ApplicationDbContext>();
 builder.Services.AddControllersWithViews();
+builder.Services.AddScoped<StackUnderflow.Services.ThreadVoteService>();
+builder.Services.AddScoped<StackUnderflow.Services.PostVoteService>();
 builder.Services.AddSingleton<ContentSafetyAnalyzer>();
 
 // Let fetch()-based API calls send the antiforgery token via a request header.

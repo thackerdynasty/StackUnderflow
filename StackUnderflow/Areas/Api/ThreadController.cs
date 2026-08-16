@@ -1,22 +1,21 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using StackUnderflow.Areas.Api.Models;
 using StackUnderflow.Data;
 using StackUnderflow.Extensions;
 using StackUnderflow.Models;
+using StackUnderflow.Services;
+using System.Security.Claims;
 
 namespace StackUnderflow.Areas.Api;
 
 [Route("api/[controller]")]
 [ApiController]
-public class ThreadController : ControllerBase
+public class ThreadController(ApplicationDbContext context, ThreadVoteService voteService) : ControllerBase
 {
-    private readonly ApplicationDbContext _context;
-
-    public ThreadController(ApplicationDbContext context)
-    {
-        _context = context;
-    }
+    private readonly ApplicationDbContext _context = context;
+    private readonly ThreadVoteService _voteService = voteService;
 
     // GET: api/Thread
     [HttpGet]
@@ -163,6 +162,41 @@ public class ThreadController : ControllerBase
     //
     //     return NoContent();
     // }
+
+    // POST: api/Thread/5/vote  ->  { "direction": "up" | "down" }
+    [HttpPost("{id}/vote")]
+    [Authorize]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<VoteResult>> Vote(int id, VoteRequest request, CancellationToken ct)
+    {
+        var value = ThreadVoteService.ParseVoteValue(request.Direction);
+        if (value is null)
+        {
+            return BadRequest("Direction must be 'up' or 'down'.");
+        }
+
+        var userId = User.FindFirst(ClaimTypes.NameIdentifier)!.Value;
+
+        var outcome = await _voteService.VoteAsync(id, userId, value.Value, ct);
+
+        return outcome.Status switch
+        {
+            ThreadVoteStatus.ThreadNotFound => NotFound(),
+            ThreadVoteStatus.SelfVoteNotAllowed =>
+                StatusCode(StatusCodes.Status403Forbidden, "You cannot vote on your own thread."),
+            _ => Ok(new VoteResult
+            {
+                ThreadId = outcome.ThreadId,
+                Score = outcome.Score,
+                UpvoteCount = outcome.UpvoteCount,
+                DownvoteCount = outcome.DownvoteCount,
+                UserVote = outcome.UserVote
+            })
+        };
+    }
 
     private bool SUThreadExists(int id)
     {

@@ -98,7 +98,104 @@ document.addEventListener('DOMContentLoaded', function() {
     attachAnswerSort();
     attachAnswerPagination();
     attachProfileCards();
+    attachVoting();
 });
+
+// -----------------------------
+// Voting (questions + answers): calls the vote API and updates in place.
+// One delegated listener handles every vote column on the page, including
+// answer cards added later by "Load more answers". Each column carries its
+// own endpoint and state via data- attributes.
+// -----------------------------
+function attachVoting() {
+    // Tracks which columns have a request in flight so double-clicks are ignored.
+    const busy = new WeakSet();
+
+    const applyState = (container, userVote, score) => {
+        const scoreEl = container.querySelector('[data-vote-score]');
+        if (scoreEl && typeof score === 'number') scoreEl.textContent = score;
+        container.querySelectorAll('[data-vote-direction]').forEach((button) => {
+            const isSelected =
+                (button.dataset.voteDirection === 'up' && userVote === 1) ||
+                (button.dataset.voteDirection === 'down' && userVote === -1);
+            button.classList.toggle('is-selected', isSelected);
+            button.setAttribute('aria-pressed', String(isSelected));
+        });
+    };
+
+    const showError = (container, message) => {
+        const el = container.querySelector('[data-vote-error]');
+        if (!el) return;
+        el.textContent = message;
+        el.hidden = false;
+    };
+
+    const clearError = (container) => {
+        const el = container.querySelector('[data-vote-error]');
+        if (el) {
+            el.textContent = '';
+            el.hidden = true;
+        }
+    };
+
+    document.addEventListener('click', async (event) => {
+        const button = event.target.closest('[data-vote-direction]');
+        if (!button) return;
+
+        const container = button.closest('[data-vote]');
+        if (!container) return;
+
+        // Voting on your own thread/answer: show the message, don't call the API.
+        if (container.dataset.selfOwned === 'true') {
+            showError(container, container.dataset.selfMessage || "You can't vote on your own post.");
+            return;
+        }
+
+        // Not signed in: send them to login and back to this page afterwards.
+        if (container.dataset.authenticated !== 'true') {
+            const returnUrl = window.location.pathname + window.location.search;
+            window.location.href = `/Identity/Account/Login?returnUrl=${encodeURIComponent(returnUrl)}`;
+            return;
+        }
+
+        if (busy.has(container)) return;
+        busy.add(container);
+        clearError(container);
+
+        const buttons = Array.from(container.querySelectorAll('[data-vote-direction]'));
+        buttons.forEach((b) => (b.disabled = true));
+
+        try {
+            const response = await fetch(container.dataset.voteEndpoint, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+                body: JSON.stringify({ direction: button.dataset.voteDirection })
+            });
+
+            // Cookie auth may bounce an expired session to the login page.
+            if (response.redirected) {
+                window.location.href = response.url;
+                return;
+            }
+
+            // Server backstop for self-votes (buttons are usually short-circuited above).
+            if (response.status === 403) {
+                showError(container, container.dataset.selfMessage || "You can't vote on your own post.");
+                return;
+            }
+            if (!response.ok) throw new Error(`Vote failed: ${response.status}`);
+
+            const result = await response.json();
+            applyState(container, result.userVote, result.score);
+        } catch (error) {
+            console.error('Failed to record vote', error);
+            showError(container, 'Something went wrong. Please try again.');
+        } finally {
+            busy.delete(container);
+            buttons.forEach((b) => (b.disabled = false));
+        }
+    });
+}
 
 // Switches the active home-page filter. Replaced with a real implementation
 // by attachThreadPagination; the filter tabs call it so the server re-sorts
