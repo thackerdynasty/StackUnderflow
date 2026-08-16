@@ -112,11 +112,27 @@ public class ThreadController : Controller
     [Route("/Thread/{id}/Delete")]
     public IActionResult DeleteConfirmed(int id)
     {
-        var thread = _context.SUThreads.FirstOrDefault(t => t.Id == id);
+        var thread = _context.SUThreads
+            .Include(t => t.Posts)
+                .ThenInclude(p => p.Comments)
+            .Include(t => t.Posts)
+                .ThenInclude(p => p.Votes)
+            .Include(t => t.SavedBy)
+            .FirstOrDefault(t => t.Id == id);
         if (thread == null)
             return NotFound();
         if (thread.UserId != User.FindFirst(ClaimTypes.NameIdentifier)?.Value)
             return Forbid();
+
+        // Posts and SavedThreads use NoAction on the thread FK, so their rows must
+        // be removed explicitly before the thread. ThreadVotes cascade automatically.
+        foreach (var post in thread.Posts)
+        {
+            _context.Comments.RemoveRange(post.Comments);
+            _context.PostVotes.RemoveRange(post.Votes);
+        }
+        _context.Posts.RemoveRange(thread.Posts);
+        _context.SavedThreads.RemoveRange(thread.SavedBy);
         _context.SUThreads.Remove(thread);
         _context.SaveChanges();
         return Redirect("/");
@@ -466,8 +482,11 @@ public class ThreadController : Controller
         if (thread == null || post == null) return NotFound();
         thread.IsSolved = true;
         post.IsAcceptedAnswer = true;
-        post.User.Reputation += 15;
-        thread.User.Reputation += 2;
+        if (post.UserId != thread.UserId)
+        {
+            post.User.Reputation += 15;
+            thread.User.Reputation += 2;
+        }
         _context.SaveChanges();
         return RedirectToAction(nameof(Detail), new { id });
     }
@@ -484,10 +503,13 @@ public class ThreadController : Controller
             .Include(p => p.User)
             .FirstOrDefault(p => p.Id == postId);
         if (thread == null || post == null) return NotFound();
-        thread.IsSolved = true;
+        thread.IsSolved = false;
         post.IsAcceptedAnswer = false;
-        post.User.Reputation -= 15;
-        thread.User.Reputation -= 2;
+        if (post.UserId != thread.UserId)
+        {
+            post.User.Reputation -= 15;
+            thread.User.Reputation -= 2;
+        }
         _context.SaveChanges();
         return RedirectToAction(nameof(Detail), new { id });
     }

@@ -12,16 +12,10 @@ namespace StackUnderflow.Areas.Api;
 
 [Route("api/[controller]")]
 [ApiController]
-public class ThreadController : ControllerBase
+public class ThreadController(ApplicationDbContext context, ThreadVoteService voteService) : ControllerBase
 {
-    private readonly ApplicationDbContext _context;
-    private readonly ThreadVoteService _voteService;
-
-    public ThreadController(ApplicationDbContext context, ThreadVoteService voteService)
-    {
-        _context = context;
-        _voteService = voteService;
-    }
+    private readonly ApplicationDbContext _context = context;
+    private readonly ThreadVoteService _voteService = voteService;
 
     // GET: api/Thread
     [HttpGet]
