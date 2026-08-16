@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using StackUnderflow.Data;
 using StackUnderflow.Models;
+using StackUnderflow.Services;
 using StackUnderflow.Utilities;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -20,6 +21,11 @@ builder.Services.AddSingleton<ContentSafetyAnalyzer>();
 
 // Let fetch()-based API calls send the antiforgery token via a request header.
 builder.Services.AddAntiforgery(options => options.HeaderName = "RequestVerificationToken");
+
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy("IsModerator", policy => policy.AddRequirements(new ModeratorUserRequirement()));
+});
 
 var app = builder.Build();
 
