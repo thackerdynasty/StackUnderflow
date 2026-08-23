@@ -19,6 +19,7 @@ builder.Services.AddControllersWithViews();
 builder.Services.AddScoped<StackUnderflow.Services.ThreadVoteService>();
 builder.Services.AddScoped<StackUnderflow.Services.PostVoteService>();
 builder.Services.AddSingleton<ContentSafetyAnalyzer>();
+builder.Services.AddHostedService<StackUnderflow.Services.ThreadAutoLockService>();
 
 // Let fetch()-based API calls send the antiforgery token via a request header.
 builder.Services.AddAntiforgery(options => options.HeaderName = "RequestVerificationToken");

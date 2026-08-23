@@ -36,6 +36,7 @@
         ThreadId = Model.Id,
         ThreadUserId = Model.UserId,
         ThreadIsSolved = Model.IsSolved,
+        ThreadIsLocked = Model.IsLocked,
         IsThreadOwner = isThreadOwner,
         CurrentUserId = currentUserId,
         AnswerVote = answerVotes.TryGetValue(post.Id, out var currentAnswerVote) ? currentAnswerVote : 0,
@@ -90,6 +91,22 @@
                 <div class="accepted-mark" title="Solved" aria-label="Solved">✓</div>
             }
         </aside>
+
+        @if (isThreadOwner)
+        {
+            <div class="lock-form">
+                <button type="button" class="lock-control @(Model.IsLocked ? "is-locked" : "")"
+                        data-lock-thread-id="@Model.Id"
+                        aria-pressed="@(Model.IsLocked ? "true" : "false")"
+                        title="@(Model.IsLocked ? "Unlock this thread" : "Lock this thread")"
+                        aria-label="@(Model.IsLocked ? "Unlock this thread" : "Lock this thread")">
+                    <svg class="lock-icon" viewBox="0 0 24 24" width="24" height="24" aria-hidden="true" focusable="false">
+                        <rect x="5" y="11" width="14" height="10" rx="2" />
+                        <path d="M8 11V7a4 4 0 0 1 8 0v4" />
+                    </svg>
+                </button>
+            </div>
+        }
 
         @if (User.Identity?.IsAuthenticated == true)
         {
@@ -166,7 +183,13 @@
             }
         }
 
-        @if (User.Identity?.IsAuthenticated == true)
+        @if (Model.IsLocked)
+        {
+            <div class="alert alert-secondary thread-locked-notice" role="status">
+                This thread is locked. New answers and comments can't be posted.
+            </div>
+        }
+        else if (User.Identity?.IsAuthenticated == true)
         {
             <form asp-controller="Thread" asp-action="PostAnswer" asp-route-id="@Model.Id" method="post" class="answer-form">
                 @Html.AntiForgeryToken()

@@ -175,6 +175,9 @@ public static class DatabaseSeeder
                 UpvoteCount = upvotes,
                 DownvoteCount = downvotes,
                 IsSolved = threadIndex % 4 != 1,
+                // Solved shortly after the first answer arrived; lets the auto-lock
+                // sweep pick up seeded threads that have been solved for over a month.
+                SolvedAt = threadIndex % 4 != 1 ? createdAt.AddHours(1) : null,
                 UserId = author.Id,
                 User = author,
                 Posts = new List<Post>(),

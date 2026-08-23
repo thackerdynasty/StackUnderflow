@@ -738,9 +738,35 @@ function attachAnswerPagination() {
         }
     }
 
+    async function toggleLock(button) {
+        const threadId = button.dataset.lockThreadId;
+        if (!threadId || button.dataset.busy === 'true') return;
+
+        button.dataset.busy = 'true';
+        try {
+            const response = await fetch(`/Thread/ToggleLock/${encodeURIComponent(threadId)}`, {
+                method: 'POST',
+                headers: {
+                    'RequestVerificationToken': antiForgeryToken()
+                }
+            });
+            if (!response.ok) throw new Error(`Request failed: ${response.status}`);
+
+            // ToggleLock redirects back to the thread; reload to reflect the new state.
+            window.location.reload();
+        } catch (error) {
+            console.error('Failed to toggle thread lock', error);
+            button.dataset.busy = 'false';
+        }
+    }
+
     document.addEventListener('DOMContentLoaded', function () {
         document.querySelectorAll('.save-control[data-save-thread-id]').forEach((button) => {
             button.addEventListener('click', () => toggleSave(button));
+        });
+
+        document.querySelectorAll('.lock-control[data-lock-thread-id]').forEach((button) => {
+            button.addEventListener('click', () => toggleLock(button));
         });
 
         // Load the freshest ranking on the home page (reflects saves made elsewhere).

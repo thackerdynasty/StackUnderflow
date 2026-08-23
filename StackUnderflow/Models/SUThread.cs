@@ -18,7 +18,12 @@ public class SUThread
     public int DownvoteCount { get; set; }
     
     public bool IsSolved { get; set; }
-    
+    public bool IsLocked { get; set; }
+
+    // When the thread was marked solved (an answer accepted). Null when unsolved.
+    // Used to auto-lock threads that have stayed solved past the retention window.
+    public DateTime? SolvedAt { get; set; }
+
     public string UserId { get; set; } = "";
     public User User { get; set; } = null!;
     

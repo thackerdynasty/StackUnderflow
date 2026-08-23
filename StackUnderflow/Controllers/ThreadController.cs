@@ -255,6 +255,15 @@ public partial class ThreadController : Controller
             thread.ViewCount++;
         }
 
+        // Lock immediately if this thread crossed the solved-retention window since it
+        // was last touched, so the view/enforcement is correct without waiting for the
+        // background sweep (ThreadAutoLockService) to catch it.
+        if (thread.IsSolved && !thread.IsLocked && thread.SolvedAt.HasValue
+            && DateTime.UtcNow - thread.SolvedAt.Value >= ThreadAutoLockService.SolvedLockAfter)
+        {
+            thread.IsLocked = true;
+        }
+
         _context.SaveChanges();
 
         ViewBag.TotalAnswers = _context.Posts.Count(p => p.SUThreadId == id);
@@ -307,6 +316,7 @@ public partial class ThreadController : Controller
             ThreadId = id,
             ThreadUserId = thread.UserId,
             ThreadIsSolved = thread.IsSolved,
+            ThreadIsLocked = thread.IsLocked,
             IsThreadOwner = isThreadOwner,
             CurrentUserId = currentUserId,
             AnswerVote = answerVotes.TryGetValue(post.Id, out var vote) ? vote : 0,
@@ -336,9 +346,15 @@ public partial class ThreadController : Controller
             return RedirectToAction(nameof(Detail), new { id });
         }
 
-        var threadExists = _context.SUThreads.Any(t => t.Id == id);
-        if (!threadExists)
+        var thread = _context.SUThreads.FirstOrDefault(t => t.Id == id);
+        if (thread == null)
             return NotFound();
+
+        if (thread.IsLocked)
+        {
+            TempData["AnswerError"] = "This thread is locked. You can't post new answers.";
+            return RedirectToAction(nameof(Detail), new { id });
+        }
 
         var post = new Post
         {
@@ -382,6 +398,7 @@ public partial class ThreadController : Controller
         if (post.IsAcceptedAnswer)
         {
             thread.IsSolved = false;
+            thread.SolvedAt = null;
         }
 
         _context.Comments.RemoveRange(post.Comments);
@@ -404,9 +421,19 @@ public partial class ThreadController : Controller
             return RedirectToAction(nameof(Detail), new { id });
         }
 
+        var thread = _context.SUThreads.FirstOrDefault(t => t.Id == id);
+        if (thread == null)
+            return NotFound();
+
         var postExists = _context.Posts.Any(p => p.Id == postId && p.SUThreadId == id);
         if (!postExists)
             return NotFound();
+
+        if (thread.IsLocked)
+        {
+            TempData["CommentError"] = "This thread is locked. You can't post new comments.";
+            return RedirectToAction(nameof(Detail), new { id });
+        }
 
         var (isSafe, _) = _contentSafetyAnalyzer.CheckText(content);
         if (!isSafe)
@@ -574,6 +601,7 @@ public partial class ThreadController : Controller
             .FirstOrDefault(p => p.Id == postId);
         if (thread == null || post == null) return NotFound();
         thread.IsSolved = true;
+        thread.SolvedAt = DateTime.UtcNow;
         post.IsAcceptedAnswer = true;
         if (post.UserId != thread.UserId)
         {
@@ -597,12 +625,27 @@ public partial class ThreadController : Controller
             .FirstOrDefault(p => p.Id == postId);
         if (thread == null || post == null) return NotFound();
         thread.IsSolved = false;
+        thread.SolvedAt = null;
         post.IsAcceptedAnswer = false;
         if (post.UserId != thread.UserId)
         {
             post.User.Reputation -= 15;
             thread.User.Reputation -= 2;
         }
+        _context.SaveChanges();
+        return RedirectToAction(nameof(Detail), new { id });
+    }
+
+    [Authorize]
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public IActionResult ToggleLock(int id)
+    {
+        var thread = _context.SUThreads.FirstOrDefault(t => t.Id == id);
+        if (thread == null) return NotFound();
+        if (thread.UserId != User.FindFirst(ClaimTypes.NameIdentifier)?.Value)
+            return Forbid();
+        thread.IsLocked = !thread.IsLocked;
         _context.SaveChanges();
         return RedirectToAction(nameof(Detail), new { id });
     }
