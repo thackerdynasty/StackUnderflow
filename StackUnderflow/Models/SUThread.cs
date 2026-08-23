@@ -26,4 +26,5 @@ public class SUThread
     public ICollection<ThreadVote> Votes { get; set; } = [];
     public ICollection<SavedThread> SavedBy { get; set; } = [];
     public ICollection<ThreadTag> ThreadTags { get; set; } = [];
+    public ICollection<ThreadReport> Reports { get; set; } = [];
 }

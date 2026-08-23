@@ -224,6 +224,9 @@ public partial class ThreadController : Controller
 
                 ViewBag.IsSaved = _context.SavedThreads
                     .Any(s => s.UserId == userId && s.SUThreadId == id);
+
+                ViewBag.HasReported = _context.ThreadReports
+                    .Any(r => r.ReporterId == userId && r.SUThreadId == id);
             }
 
             if (userId != thread.UserId)
@@ -250,6 +253,82 @@ public partial class ThreadController : Controller
             .ToList();
 
         return View(thread);
+    }
+
+    [Authorize]
+    [HttpGet]
+    [Route("/Thread/{id}/Report")]
+    public IActionResult Report(int id)
+    {
+        var thread = _context.SUThreads
+            .AsNoTracking()
+            .FirstOrDefault(t => t.Id == id);
+        if (thread == null)
+            return NotFound();
+
+        var userId = User.FindFirst(ClaimTypes.NameIdentifier)!.Value;
+        if (thread.UserId == userId)
+            return Forbid();
+
+        if (_context.ThreadReports.Any(r => r.ReporterId == userId && r.SUThreadId == id))
+        {
+            TempData["ReportInfo"] = "You have already reported this thread.";
+            return RedirectToAction(nameof(Detail), new { id });
+        }
+
+        return View(new ThreadReportViewModel
+        {
+            ThreadId = thread.Id,
+            ThreadTitle = thread.Title
+        });
+    }
+
+    [Authorize]
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    [Route("/Thread/{id}/Report")]
+    public IActionResult Report(int id, ThreadReportViewModel model)
+    {
+        var thread = _context.SUThreads
+            .AsNoTracking()
+            .FirstOrDefault(t => t.Id == id);
+        if (thread == null)
+            return NotFound();
+
+        var userId = User.FindFirst(ClaimTypes.NameIdentifier)!.Value;
+        if (thread.UserId == userId)
+            return Forbid();
+
+        model.ThreadId = thread.Id;
+        model.ThreadTitle = thread.Title;
+
+        var canonicalReason = ThreadReportReasons.All.FirstOrDefault(
+            reason => string.Equals(reason, model.Reason, StringComparison.Ordinal));
+        if (canonicalReason == null)
+        {
+            ModelState.AddModelError(nameof(model.Reason), "Select a valid report reason.");
+        }
+
+        if (_context.ThreadReports.Any(r => r.ReporterId == userId && r.SUThreadId == id))
+        {
+            ModelState.AddModelError(string.Empty, "You have already reported this thread.");
+        }
+
+        if (!ModelState.IsValid)
+            return View(model);
+
+        _context.ThreadReports.Add(new ThreadReport
+        {
+            Reason = canonicalReason!,
+            Details = string.IsNullOrWhiteSpace(model.Details) ? null : model.Details.Trim(),
+            ReportedAt = DateTime.UtcNow,
+            ReporterId = userId,
+            SUThreadId = id
+        });
+        _context.SaveChanges();
+
+        TempData["ReportSuccess"] = "Thank you. Your report was added to the moderator review queue.";
+        return RedirectToAction(nameof(Detail), new { id });
     }
 
     [Route("/Thread/{id}/Answers")]

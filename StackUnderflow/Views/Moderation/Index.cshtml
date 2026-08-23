@@ -1,7 +1,64 @@
-﻿@*
-    For more information on enabling MVC for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
-*@
+﻿@model IReadOnlyList<ThreadReport>
+
 @{
+    ViewData["Title"] = "Moderator dashboard";
 }
 
-<h1>Moderator Dashboard</h1>
+<section class="moderation-dashboard">
+    <header class="moderation-header">
+        <div>
+            <h1>Moderator dashboard</h1>
+            <p>Pending thread reports are visible to every moderator and are not individually assigned.</p>
+        </div>
+        <span class="badge bg-secondary">@Model.Count pending</span>
+    </header>
+
+    @if (TempData["ModerationSuccess"] is string success)
+    {
+        <div class="alert alert-success" role="status">@success</div>
+    }
+    @if (TempData["ModerationInfo"] is string info)
+    {
+        <div class="alert alert-info" role="status">@info</div>
+    }
+
+    @if (Model.Count == 0)
+    {
+        <div class="moderation-empty">
+            <h2>The queue is clear</h2>
+            <p>There are no thread reports waiting for review.</p>
+        </div>
+    }
+    else
+    {
+        <div class="table-responsive">
+            <table class="table align-middle moderation-table">
+                <thead>
+                <tr>
+                    <th scope="col">Thread</th>
+                    <th scope="col">Reason</th>
+                    <th scope="col">Reported by</th>
+                    <th scope="col">Received</th>
+                    <th scope="col"><span class="visually-hidden">Actions</span></th>
+                </tr>
+                </thead>
+                <tbody>
+                @foreach (var report in Model)
+                {
+                    <tr>
+                        <td>
+                            <a asp-controller="Thread" asp-action="Detail" asp-route-id="@report.SUThreadId">@report.SUThread.Title</a>
+                        </td>
+                        <td>@report.Reason</td>
+                        <td>@(report.Reporter.UserName ?? "unknown user")</td>
+                        <td><time datetime="@report.ReportedAt.ToString("O")">@report.ReportedAt.ToString("MMM d, yyyy HH:mm") UTC</time></td>
+                        <td class="text-end">
+                            <a asp-controller="Moderation" asp-action="Review" asp-route-id="@report.Id" class="btn btn-sm btn-primary">Review</a>
+                        </td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </div>
+    }
+</section>

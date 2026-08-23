@@ -1,0 +1,42 @@
+@model ThreadReportViewModel
+
+@{
+    ViewData["Title"] = "Report thread";
+}
+
+<section class="report-page">
+    <a asp-controller="Thread" asp-action="Detail" asp-route-id="@Model.ThreadId" class="report-back-link">← Back to thread</a>
+    <h1>Report thread</h1>
+    <p class="text-muted">Report <strong>@Model.ThreadTitle</strong> for review by the shared moderator team.</p>
+
+    <form asp-controller="Thread" asp-action="Report" asp-route-id="@Model.ThreadId" method="post" class="report-form">
+        <div asp-validation-summary="ModelOnly" class="text-danger" role="alert"></div>
+
+        <div class="mb-3">
+            <label asp-for="Reason" class="form-label">Reason</label>
+            <select asp-for="Reason" class="form-select">
+                <option value="">Select a reason</option>
+                @foreach (var reason in ThreadReportReasons.All)
+                {
+                    <option value="@reason">@reason</option>
+                }
+            </select>
+            <span asp-validation-for="Reason" class="text-danger"></span>
+        </div>
+
+        <div class="mb-3">
+            <label asp-for="Details" class="form-label"></label>
+            <textarea asp-for="Details" class="form-control" rows="6" maxlength="1000" placeholder="Explain what a moderator should look at (optional)."></textarea>
+            <span asp-validation-for="Details" class="text-danger"></span>
+        </div>
+
+        <div class="report-form-actions">
+            <button type="submit" class="btn btn-danger">Submit report</button>
+            <a asp-controller="Thread" asp-action="Detail" asp-route-id="@Model.ThreadId" class="btn btn-outline-secondary">Cancel</a>
+        </div>
+    </form>
+</section>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}
