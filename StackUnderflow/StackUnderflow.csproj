@@ -9,6 +9,10 @@
 
     <ItemGroup>
         <PackageReference Include="Azure.Storage.Blobs" Version="12.29.1" />
+        <!-- Azure.Core already declares DefaultAzureCredential; Azure.Identity arrives
+             transitively and declares it too, so it is excluded at compile time (CS0433)
+             while staying available at runtime. -->
+        <PackageReference Include="Azure.Identity" Version="1.14.2" ExcludeAssets="compile" />
         <PackageReference Include="Microsoft.AspNetCore.Diagnostics.EntityFrameworkCore" Version="10.0.1" />
         <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="10.0.1" />
         <PackageReference Include="Microsoft.AspNetCore.Identity.UI" Version="10.0.1" />

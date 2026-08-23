@@ -63,7 +63,8 @@ public class ProfileImageController(
             return Problem(
                 title: "Profile image storage is not configured",
                 detail: "Profile image uploads are disabled because Azure Storage has not been configured yet. "
-                        + "See the \"Profile image uploads\" section of the README for setup steps.",
+                        + "Set AzureStorage:ServiceUri, or AzureStorage:ConnectionString on a host with no "
+                        + "Azure identity, to enable them.",
                 statusCode: StatusCodes.Status503ServiceUnavailable);
         }
 

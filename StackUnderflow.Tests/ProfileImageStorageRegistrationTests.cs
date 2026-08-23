@@ -24,9 +24,9 @@ public class ProfileImageStorageRegistrationTests
     }
 
     [Fact]
-    public void AddProfileImageStorage_WithEmptyConnectionString_RegistersTheNullObject()
+    public void AddProfileImageStorage_WithNeitherRouteConfigured_RegistersTheNullObject()
     {
-        // Exactly what ships in appsettings.json.
+        // Section present but both routes blank, as when a deployment opts the feature off.
         var provider = Build(new Dictionary<string, string?>
         {
             ["AzureStorage:ConnectionString"] = "",
@@ -91,6 +91,45 @@ public class ProfileImageStorageRegistrationTests
     }
 
     [Fact]
+    public void AddProfileImageStorage_WithServiceUriOnly_RegistersAzureStorage()
+    {
+        // The identity-based route: nothing secret in configuration at all.
+        var provider = Build(new Dictionary<string, string?>
+        {
+            ["AzureStorage:ServiceUri"] = FakeServiceUri,
+            ["AzureStorage:ContainerName"] = "avatars",
+        });
+
+        var storage = provider.GetRequiredService<IProfileImageStorage>();
+
+        Assert.IsType<AzureBlobProfileImageStorage>(storage);
+        Assert.True(storage.IsConfigured);
+        Assert.Equal(
+            "https://devstore.blob.core.windows.net/avatars/user-1/abc.jpg",
+            storage.GetUrl("user-1/abc.jpg"));
+    }
+
+    [Fact]
+    public void AddProfileImageStorage_WithBothRoutes_PrefersTheConnectionString()
+    {
+        // A self-hoster supplying their own key must win over the endpoint shipped in
+        // appsettings.json, or they cannot point the app at their own account.
+        var provider = Build(new Dictionary<string, string?>
+        {
+            ["AzureStorage:ServiceUri"] = "https://shipped-default.blob.core.windows.net/",
+            ["AzureStorage:ConnectionString"] = FakeConnectionString,
+            ["AzureStorage:ContainerName"] = "avatars",
+        });
+
+        var storage = provider.GetRequiredService<IProfileImageStorage>();
+
+        // devstore comes from the connection string; shipped-default would mean the URI won.
+        Assert.Equal(
+            "https://devstore.blob.core.windows.net/avatars/user-1/abc.jpg",
+            storage.GetUrl("user-1/abc.jpg"));
+    }
+
+    [Fact]
     public void AzureStorageOptions_FallsBackToTheDefaultContainerName()
     {
         var options = new AzureStorageOptions { ConnectionString = FakeConnectionString };
@@ -118,6 +157,10 @@ public class ProfileImageStorageRegistrationTests
         "DefaultEndpointsProtocol=https;AccountName=devstore;" +
         "AccountKey=bm90LWEtcmVhbC1rZXktZm9yLXRlc3Rpbmctb25seS1wYWRkaW5nMDA=;" +
         "EndpointSuffix=core.windows.net";
+
+    // Same fictional account as above, reached the identity-based way. Resolving the
+    // service and composing a URL make no network call, so no credentials are needed.
+    private const string FakeServiceUri = "https://devstore.blob.core.windows.net/";
 
     private static ServiceProvider Build(IEnumerable<KeyValuePair<string, string?>> settings)
     {

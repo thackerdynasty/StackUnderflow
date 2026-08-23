@@ -139,7 +139,8 @@ public class ProfileImageControllerTests : IDisposable
         var result = await controller.Upload(UserId, TestImages.Png(), CancellationToken.None);
 
         var problem = AssertProblem(result, StatusCodes.Status503ServiceUnavailable);
-        Assert.Contains("README", problem.Detail);
+        // Names the setting to change, so the message is actionable on its own.
+        Assert.Contains("AzureStorage:ServiceUri", problem.Detail);
         Assert.Empty(storage.Uploaded);
 
         var unchanged = await _context.DbContext.Users.AsNoTracking().SingleAsync(u => u.Id == UserId);

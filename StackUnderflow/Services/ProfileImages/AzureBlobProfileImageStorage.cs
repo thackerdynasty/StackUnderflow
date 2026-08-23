@@ -1,4 +1,5 @@
 using Azure;
+using Azure.Identity;
 using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
 using Microsoft.Extensions.Options;
@@ -76,6 +77,22 @@ public sealed class AzureBlobProfileImageStorage : IProfileImageStorage
                 $"Azure Storage rejected the upload to container '{_options.ResolvedContainerName}'.",
                 ex);
         }
+        catch (AuthenticationFailedException ex)
+        {
+            // Only reachable on the identity-based route. Credential failures are not
+            // RequestFailedException, so without this they would escape as an opaque 500
+            // instead of the endpoint's 502. Covers a missing sign-in and a missing role.
+            _logger.LogError(
+                ex,
+                "Could not authenticate to Azure Storage while uploading to container '{Container}'.",
+                _options.ResolvedContainerName);
+
+            throw new ProfileImageStorageException(
+                "Could not authenticate to Azure Storage. Sign in with 'az login' and make sure you hold "
+                + "the 'Storage Blob Data Contributor' role on the account, or set "
+                + "AzureStorage:ConnectionString instead.",
+                ex);
+        }
 
         _logger.LogInformation("Uploaded profile image '{RelativePath}'.", relativePath);
         return relativePath;
@@ -107,6 +124,16 @@ public sealed class AzureBlobProfileImageStorage : IProfileImageStorage
             _logger.LogWarning(
                 ex,
                 "Could not delete replaced profile image '{RelativePath}'; it may be left orphaned.",
+                relativePath);
+        }
+        catch (AuthenticationFailedException ex)
+        {
+            // Same contract as above: cleanup must never fail the request that triggered
+            // it, so a credential problem costs at most one orphaned blob.
+            _logger.LogWarning(
+                ex,
+                "Could not authenticate to Azure Storage to delete profile image '{RelativePath}'; "
+                + "it may be left orphaned.",
                 relativePath);
         }
     }
@@ -172,7 +199,7 @@ public sealed class AzureBlobProfileImageStorage : IProfileImageStorage
             _logger.LogWarning(
                 "Container '{Container}' was created without anonymous access because the storage account " +
                 "disallows it. Profile images will not load in the browser until 'Allow Blob anonymous access' " +
-                "is enabled on the storage account. See the README.",
+                "is enabled on the storage account's Configuration page.",
                 _options.ResolvedContainerName);
 
             await container.CreateIfNotExistsAsync(PublicAccessType.None, cancellationToken: cancellationToken);
@@ -199,7 +226,7 @@ public sealed class AzureBlobProfileImageStorage : IProfileImageStorage
                 _logger.LogWarning(
                     "Container '{Container}' is private, so uploaded profile images will not load in the " +
                     "browser. In the Azure portal set the container's anonymous access level to 'Blob', and " +
-                    "make sure 'Allow Blob anonymous access' is enabled on the storage account. See the README.",
+                    "make sure 'Allow Blob anonymous access' is enabled on the storage account.",
                     _options.ResolvedContainerName);
             }
         }
