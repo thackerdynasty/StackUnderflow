@@ -584,6 +584,14 @@ body {
   margin: 0;
 }
 
+.vote-error {
+  font-size: .72rem;
+  line-height: 1.2;
+  max-width: 6.5rem;
+  text-align: center;
+  margin-top: .25rem;
+}
+
 .vote-control {
   border: 0;
   padding: 0;
@@ -632,6 +640,11 @@ body {
    save bookmark (.save-form) is not overlaid on top of the code box. */
 .thread-post:has(.save-form) .post-content pre {
   margin-right: 2.5rem;
+}
+
+/* When the lock button is also present, reserve room for both controls. */
+.thread-post:has(.lock-form) .post-content pre {
+  margin-right: 5rem;
 }
 
 .post-footer {
@@ -699,6 +712,56 @@ body {
 }
 
 .save-control.is-saved .save-icon {
+  fill: currentColor;
+}
+
+.lock-form {
+  position: absolute;
+  top: 1.35rem;
+  right: 2.5rem;
+  display: inline-flex;
+  margin: 0;
+}
+
+.lock-control {
+  display: inline-flex;
+  align-items: center;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: #6a737c;
+  line-height: 0;
+  cursor: pointer;
+}
+
+.lock-control:hover,
+.lock-control:focus-visible {
+  color: #0074cc;
+}
+
+.lock-icon {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+.lock-icon rect {
+  transition: fill .1s ease-in-out;
+}
+
+.lock-control.is-locked {
+  color: #c22e32;
+}
+
+.lock-control.is-locked:hover,
+.lock-control.is-locked:focus-visible {
+  color: #a5282b;
+}
+
+/* Fill the padlock body when locked; the shackle stays an outline. */
+.lock-control.is-locked .lock-icon rect {
   fill: currentColor;
 }
 
