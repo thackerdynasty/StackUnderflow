@@ -1,3 +1,4 @@
+using Azure.Identity;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -8,6 +9,14 @@ using StackUnderflow.Utilities;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Load secrets from Azure Key Vault into configuration. Secret names use '--' in place
+// of ':' (e.g. "Authentication--GitHub--ClientSecret" maps to "Authentication:GitHub:ClientSecret").
+var keyVaultUri = builder.Configuration["KeyVault:VaultUri"];
+if (!string.IsNullOrWhiteSpace(keyVaultUri))
+{
+    builder.Configuration.AddAzureKeyVault(new Uri(keyVaultUri), new DefaultAzureCredential());
+}
+
 // Add services to the container.
 var connectionString = builder.Configuration.GetConnectionString("ServerConnection") ??
                        throw new InvalidOperationException("Connection string 'ServerConnection' not found.");
@@ -15,8 +24,14 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlServer(connectionString));
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 
-builder.Services.AddDefaultIdentity<User>(options => options.SignIn.RequireConfirmedAccount = true)
+builder.Services.AddDefaultIdentity<User>(options => options.SignIn.RequireConfirmedAccount = false)
     .AddEntityFrameworkStores<ApplicationDbContext>();
+builder.Services.AddAuthentication()
+    .AddGitHub(options =>
+    {
+        options.ClientId = builder.Configuration["Authentication:GitHub:ClientId"];
+        options.ClientSecret = builder.Configuration["Authentication:GitHub:ClientSecret"];
+    });
 builder.Services.AddControllersWithViews();
 builder.Services.AddScoped<StackUnderflow.Services.ThreadVoteService>();
 builder.Services.AddScoped<StackUnderflow.Services.PostVoteService>();
