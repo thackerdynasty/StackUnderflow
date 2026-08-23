@@ -19,6 +19,7 @@ public class SUThread
     
     public bool IsSolved { get; set; }
     public bool IsLocked { get; set; }
+    public bool LockedByAdmin { get; set; }
 
     // When the thread was marked solved (an answer accepted). Null when unsolved.
     // Used to auto-lock threads that have stayed solved past the retention window.

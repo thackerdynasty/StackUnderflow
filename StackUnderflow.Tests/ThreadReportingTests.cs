@@ -9,6 +9,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using StackUnderflow.Controllers;
 using StackUnderflow.Data;
 using StackUnderflow.Models;
+using StackUnderflow.Services;
 using StackUnderflow.Utilities;
 
 namespace StackUnderflow.Tests;
@@ -214,6 +215,24 @@ public sealed class ThreadReportingTests : IDisposable
         Assert.Single(context.Tags);
     }
 
+    [Fact]
+    public async Task ToggleLock_AllowsModeratorWhoDoesNotOwnThread()
+    {
+        using var context = CreateContext();
+        var moderator = CreateUser("moderator", isModerator: true);
+        var thread = CreateThread(CreateUser("author"));
+        context.AddRange(moderator, thread);
+        context.SaveChanges();
+
+        var controller = CreateThreadController(context, moderator.Id);
+
+        var result = await controller.ToggleLock(thread.Id);
+
+        var redirect = Assert.IsType<RedirectToActionResult>(result);
+        Assert.Equal(nameof(ThreadController.Detail), redirect.ActionName);
+        Assert.True(thread.IsLocked);
+    }
+
     public void Dispose()
     {
         _connection.Dispose();
@@ -234,7 +253,11 @@ public sealed class ThreadReportingTests : IDisposable
         var contentSafetyAnalyzer = new ContentSafetyAnalyzer(
             new ConfigurationBuilder().Build(),
             NullLogger<ContentSafetyAnalyzer>.Instance);
-        var controller = new ThreadController(context, contentSafetyAnalyzer)
+        var controller = new ThreadController(
+            context,
+            new ThreadVoteService(context),
+            new PostVoteService(context),
+            contentSafetyAnalyzer)
         {
             ControllerContext = new ControllerContext { HttpContext = httpContext },
             TempData = new TempDataDictionary(httpContext, new TestTempDataProvider())
