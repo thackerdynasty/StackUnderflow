@@ -422,6 +422,7 @@ function attachThreadPagination() {
                 </h2>
                 <p></p>
                 <div class="question-meta">
+                    ${thread.isLocked ? '<span class="status-pill">Locked</span>' : ''}
                     ${thread.isSolved ? '<span class="status-pill">Solved</span>' : ''}
                     <span>asked ${htmlEncode(askedDate)}</span>
                     <span>by <a href="${profileUrl}" data-profile-card-user-id="${htmlEncode(String(thread.userId || ''))}"></a></span>

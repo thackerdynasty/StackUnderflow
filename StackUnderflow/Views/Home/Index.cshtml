@@ -110,6 +110,10 @@
                         }
                         <p>@Html.Raw(ContentParser.RenderCodeBlocks(excerpt))</p>
                         <div class="question-meta">
+                            @if (thread.IsLocked) 
+                            {
+                                <span class="status-pill">Locked</span>
+                            }
                             @if (thread.IsSolved)
                             {
                                 <span class="status-pill">Solved</span>

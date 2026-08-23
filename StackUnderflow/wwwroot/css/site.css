@@ -747,6 +747,10 @@ body {
   stroke-linecap: round;
 }
 
+.lock-icon rect {
+  transition: fill .1s ease-in-out;
+}
+
 .lock-control.is-locked {
   color: #c22e32;
 }
@@ -754,6 +758,11 @@ body {
 .lock-control.is-locked:hover,
 .lock-control.is-locked:focus-visible {
   color: #a5282b;
+}
+
+/* Fill the padlock body when locked; the shackle stays an outline. */
+.lock-control.is-locked .lock-icon rect {
+  fill: currentColor;
 }
 
 .link-form {

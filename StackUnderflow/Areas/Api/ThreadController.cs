@@ -78,6 +78,7 @@ public class ThreadController(ApplicationDbContext context, ThreadVoteService vo
                 UpvoteCount = t.UpvoteCount,
                 DownvoteCount = t.DownvoteCount,
                 IsSolved = t.IsSolved,
+                IsLocked = t.IsLocked,
                 UserId = t.UserId,
                 AuthorName = t.User != null ? t.User.UserName : "unknown user",
                 AnswerCount = t.Posts.Count,
