@@ -13,6 +13,7 @@ public class ThreadSummaryDto
     public int DownvoteCount { get; set; }
 
     public bool IsSolved { get; set; }
+    public bool IsLocked { get; set; }
 
     public string UserId { get; set; } = string.Empty;
     public string AuthorName { get; set; } = "unknown user";
