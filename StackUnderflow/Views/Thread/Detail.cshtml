@@ -21,6 +21,7 @@
 
     bool isThreadOwner = User.Identity?.IsAuthenticated == true && Model.UserId == currentUserId;
     bool isSaved = ViewBag.IsSaved is true;
+    bool hasReported = ViewBag.HasReported is true;
 
     // Answers are ordered server-side; Model.Posts already holds only the first page.
     var posts = (Model.Posts ?? Array.Empty<Post>()).ToList();
@@ -49,6 +50,14 @@
     @if (TempData["TagWarning"] is string tagWarning)
     {
         <div class="alert alert-warning" role="alert">@tagWarning</div>
+    }
+    @if (TempData["ReportSuccess"] is string reportSuccess)
+    {
+        <div class="alert alert-success" role="status">@reportSuccess</div>
+    }
+    @if (TempData["ReportInfo"] is string reportInfo)
+    {
+        <div class="alert alert-info" role="status">@reportInfo</div>
     }
     <header class="thread-header">
         <div>
@@ -132,6 +141,17 @@
                     {
                         <a asp-controller="Thread" asp-action="Edit" asp-route-id="@Model.Id">Edit</a>
                         <a asp-controller="Thread" asp-action="Delete" asp-route-id="@Model.Id">Delete</a>
+                    }
+                    else if (User.Identity?.IsAuthenticated == true)
+                    {
+                        if (hasReported)
+                        {
+                            <span class="reported-label">Reported</span>
+                        }
+                        else
+                        {
+                            <a asp-controller="Thread" asp-action="Report" asp-route-id="@Model.Id">Report</a>
+                        }
                     }
                 </div>
 

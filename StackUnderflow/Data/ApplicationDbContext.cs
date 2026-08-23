@@ -14,6 +14,7 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public DbSet<SavedThread> SavedThreads { get; set; }
     public DbSet<Tag> Tags { get; set; }
     public DbSet<ThreadTag> ThreadTags { get; set; }
+    public DbSet<ThreadReport> ThreadReports { get; set; }
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);
@@ -112,5 +113,27 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
             .WithMany(t => t.ThreadTags)
             .HasForeignKey(tt => tt.TagId)
             .OnDelete(DeleteBehavior.Cascade);
+
+        builder.Entity<ThreadReport>()
+            .HasOne(r => r.Reporter)
+            .WithMany(u => u.SubmittedThreadReports)
+            .HasForeignKey(r => r.ReporterId)
+            .OnDelete(DeleteBehavior.NoAction);
+
+        builder.Entity<ThreadReport>()
+            .HasOne(r => r.ReviewedBy)
+            .WithMany(u => u.ReviewedThreadReports)
+            .HasForeignKey(r => r.ReviewedById)
+            .OnDelete(DeleteBehavior.NoAction);
+
+        builder.Entity<ThreadReport>()
+            .HasOne(r => r.SUThread)
+            .WithMany(t => t.Reports)
+            .HasForeignKey(r => r.SUThreadId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        builder.Entity<ThreadReport>()
+            .HasIndex(r => new { r.ReporterId, r.SUThreadId })
+            .IsUnique();
     }
 }

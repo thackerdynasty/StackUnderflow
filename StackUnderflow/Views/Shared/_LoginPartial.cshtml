@@ -1,10 +1,18 @@
 ﻿@using Microsoft.AspNetCore.Identity
+@using Microsoft.AspNetCore.Authorization
 @inject SignInManager<User> SignInManager
 @inject UserManager<User> UserManager
+@inject IAuthorizationService AuthorizationService
 
 <ul class="navbar-nav">
     @if (SignInManager.IsSignedIn(User))
     {
+        @if ((await AuthorizationService.AuthorizeAsync(User, "IsModerator")).Succeeded)
+        {
+            <li class="nav-item">
+                <a class="nav-link text-dark" asp-area="" asp-controller="Moderation" asp-action="Index">Moderation</a>
+            </li>
+        }
         <li class="nav-item">
             <a class="nav-link text-dark" asp-area="" asp-controller="Profile" asp-action="Index">Profile</a>
         </li>
