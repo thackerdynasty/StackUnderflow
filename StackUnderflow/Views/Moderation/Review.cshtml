@@ -1,0 +1,89 @@
+@using StackUnderflow.Utilities
+@model ThreadReport
+
+@{
+    ViewData["Title"] = "Review thread report";
+    var isPending = Model.ReviewedAt == null;
+    var statusText = isPending
+        ? "Pending"
+        : Model.Resolution == ThreadReportResolution.Safe ? "Safe" : "Reviewed";
+}
+
+<section class="moderation-review">
+    <a asp-controller="Moderation" asp-action="Index" class="report-back-link">← Back to moderation queue</a>
+    <header>
+        <h1>Review thread report</h1>
+        <span class="badge @(isPending ? "bg-warning text-dark" : "bg-success")">@statusText</span>
+    </header>
+
+    @if (TempData["ModerationError"] is string error)
+    {
+        <div class="alert alert-danger" role="alert">@error</div>
+    }
+
+    <dl class="report-metadata">
+        <div>
+            <dt>Reason</dt>
+            <dd>@Model.Reason</dd>
+        </div>
+        <div>
+            <dt>Reported by</dt>
+            <dd>@(Model.Reporter.UserName ?? "unknown user")</dd>
+        </div>
+        <div>
+            <dt>Reported</dt>
+            <dd>@Model.ReportedAt.ToString("MMM d, yyyy HH:mm") UTC</dd>
+        </div>
+        @if (!string.IsNullOrWhiteSpace(Model.Details))
+        {
+            <div class="report-metadata-wide">
+                <dt>Additional details</dt>
+                <dd>@Model.Details</dd>
+            </div>
+        }
+    </dl>
+
+    <article class="reported-thread-preview">
+        <header>
+            <div>
+                <p class="text-muted mb-1">Thread under review</p>
+                <h2>@Model.SUThread.Title</h2>
+            </div>
+            <a asp-controller="Thread" asp-action="Detail" asp-route-id="@Model.SUThreadId" class="btn btn-sm btn-outline-primary">Open thread</a>
+        </header>
+        <div class="reported-thread-content">@Html.Raw(ContentParser.RenderCodeBlocks(Model.SUThread.Content))</div>
+        <footer>Posted by @(Model.SUThread.User.UserName ?? "unknown user") on @Model.SUThread.CreatedAt.ToString("MMM d, yyyy")</footer>
+    </article>
+
+    @if (isPending)
+    {
+        <form asp-controller="Moderation" asp-action="CompleteReview" asp-route-id="@Model.Id" method="post" class="complete-review-form">
+            <div class="mb-3">
+                <label for="moderatorNotes" class="form-label">Moderator notes</label>
+                <textarea id="moderatorNotes" name="moderatorNotes" class="form-control" rows="4" maxlength="1000" placeholder="Record the outcome or follow-up taken (optional)."></textarea>
+            </div>
+            <div class="review-decision-actions">
+                <button type="submit" name="decision" value="Safe" class="btn btn-success">Mark safe</button>
+                <button type="submit"
+                        name="decision"
+                        value="Unsafe"
+                        class="btn btn-danger"
+                        onclick="return confirm('Mark this thread unsafe and permanently delete it, including its answers and comments?');">
+                    Mark unsafe and delete
+                </button>
+            </div>
+            <p class="unsafe-review-warning">Marking a thread unsafe permanently deletes the thread and all of its related content.</p>
+        </form>
+    }
+    else
+    {
+        <div class="review-complete-summary">
+            <strong>@(Model.Resolution == ThreadReportResolution.Safe ? "Marked safe" : "Reviewed") by @(Model.ReviewedBy?.UserName ?? "a moderator")</strong>
+            <span>@Model.ReviewedAt?.ToString("MMM d, yyyy HH:mm") UTC</span>
+            @if (!string.IsNullOrWhiteSpace(Model.ModeratorNotes))
+            {
+                <p>@Model.ModeratorNotes</p>
+            }
+        </div>
+    }
+</section>

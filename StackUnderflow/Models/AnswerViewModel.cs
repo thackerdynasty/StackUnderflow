@@ -9,6 +9,7 @@ public class AnswerViewModel
     public int ThreadId { get; set; }
     public string ThreadUserId { get; set; } = string.Empty;
     public bool ThreadIsSolved { get; set; }
+    public bool ThreadIsLocked { get; set; }
     public bool IsThreadOwner { get; set; }
     public string? CurrentUserId { get; set; }
     public int AnswerVote { get; set; }

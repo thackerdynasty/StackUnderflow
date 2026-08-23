@@ -1,8 +1,11 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using StackUnderflow.Data;
 using StackUnderflow.Models;
 using StackUnderflow.Services.ProfileImages;
+using StackUnderflow.Services;
+using StackUnderflow.Utilities;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -16,6 +19,11 @@ builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 builder.Services.AddDefaultIdentity<User>(options => options.SignIn.RequireConfirmedAccount = true)
     .AddEntityFrameworkStores<ApplicationDbContext>();
 builder.Services.AddControllersWithViews();
+builder.Services.AddScoped<StackUnderflow.Services.ThreadVoteService>();
+builder.Services.AddScoped<StackUnderflow.Services.PostVoteService>();
+builder.Services.AddSingleton<ContentSafetyAnalyzer>();
+builder.Services.AddScoped<IAuthorizationHandler, ModeratorUserHandler>();
+builder.Services.AddHostedService<StackUnderflow.Services.ThreadAutoLockService>();
 
 // Let fetch()-based API calls send the antiforgery token via a request header.
 builder.Services.AddAntiforgery(options => options.HeaderName = "RequestVerificationToken");
@@ -23,6 +31,10 @@ builder.Services.AddAntiforgery(options => options.HeaderName = "RequestVerifica
 // Profile image storage. Falls back to a no-op implementation when no Azure
 // Storage connection string is configured, leaving the rest of the app unchanged.
 builder.Services.AddProfileImageStorage(builder.Configuration);
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy("IsModerator", policy => policy.AddRequirements(new ModeratorUserRequirement()));
+});
 
 var app = builder.Build();
 
