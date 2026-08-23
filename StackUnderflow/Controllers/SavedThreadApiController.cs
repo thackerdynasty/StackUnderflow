@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using StackUnderflow.Data;
 using StackUnderflow.Models;
 using StackUnderflow.Services;
+using StackUnderflow.Services.ProfileImages;
 
 namespace StackUnderflow.Controllers;
 
@@ -14,9 +15,12 @@ namespace StackUnderflow.Controllers;
 /// </summary>
 [ApiController]
 [Route("api/saved-threads")]
-public class SavedThreadApiController(ApplicationDbContext context) : ControllerBase
+public class SavedThreadApiController(
+    ApplicationDbContext context,
+    IProfileImageStorage profileImageStorage) : ControllerBase
 {
     private readonly ApplicationDbContext _context = context;
+    private readonly IProfileImageStorage _profileImageStorage = profileImageStorage;
 
     /// <summary>Toggle whether the current user has saved the given thread.</summary>
     [Authorize]
@@ -59,7 +63,7 @@ public class SavedThreadApiController(ApplicationDbContext context) : Controller
     public async Task<IActionResult> Leaderboard([FromQuery] int count = 3)
     {
         count = Math.Clamp(count, 1, 20);
-        var entries = await LeaderboardService.GetTopAuthorsAsync(_context, count);
+        var entries = await LeaderboardService.GetTopAuthorsAsync(_context, count, _profileImageStorage);
         return Ok(entries);
     }
 }

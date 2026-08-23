@@ -25,6 +25,21 @@
                  onerror="this.style.display='none';this.nextElementSibling.style.display='flex';"/>
             <span class="profile-avatar-initials">@Model.Initials</span>
         }
+
+        @if (Model.CanUploadImage)
+        {
+            @* Last child on purpose: the img's nextElementSibling must stay the initials
+               fallback that the onerror handler and the upload script both rely on. *@
+            <button type="button" class="avatar-edit-button" id="avatarPickButton"
+                    aria-label="Add a profile image" title="Add a profile image">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+                     stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+                    <path d="M3 9.5A1.5 1.5 0 0 1 4.5 8h1.7l1-1.8h4.6l1 1.8h1.7A1.5 1.5 0 0 1 16 9.5v7A1.5 1.5 0 0 1 14.5 18h-10A1.5 1.5 0 0 1 3 16.5v-7Z"/>
+                    <circle cx="9.5" cy="13" r="2.6"/>
+                    <path d="M19 4v5M16.5 6.5h5"/>
+                </svg>
+            </button>
+        }
     </div>
     <div>
         <h1 class="h3 mb-1">@Model.DisplayName</h1>
@@ -34,20 +49,28 @@
             Member since @Model.JoinDate.ToString("MMMM d, yyyy")
         </div>
 
-        @if (Model.IsOwnProfile)
+        @* CanUploadImage already implies this is your own profile. *@
+        @if (Model.CanUploadImage)
         {
-            @if (Model.CanUploadImage)
-            {
-                <div class="mt-2" id="avatarUpload" data-upload-url="@Url.Content($"~/api/user/{Model.User.Id}/profile-image")">
-                    <div class="input-group input-group-sm" style="max-width: 22rem;">
-                        <input type="file" class="form-control" id="avatarFile"
-                               accept="image/jpeg,image/png,image/webp"
-                               aria-label="Choose a new profile image"/>
-                        <button class="btn btn-outline-secondary" type="button" id="avatarUploadButton">Upload</button>
-                    </div>
-                    <div class="form-text" id="avatarUploadStatus">JPEG, PNG, or WebP. Up to 2 MB.</div>
+            <div class="avatar-upload mt-2" id="avatarUpload"
+                 data-upload-url="@Url.Content($"~/api/user/{Model.User.Id}/profile-image")">
+                @* Opened by the camera button, so it never occupies layout itself. *@
+                <input type="file" class="d-none" id="avatarFile"
+                       accept="image/jpeg,image/png,image/webp"
+                       aria-label="Choose a profile image"/>
+
+                @* Appears only once a usable file is picked, and is hidden again after upload. *@
+                <div class="avatar-upload-pending" id="avatarUploadPending" hidden>
+                    <span class="avatar-upload-filename" id="avatarFileName"></span>
+                    <button class="btn btn-primary btn-sm" type="button" id="avatarUploadButton">Upload</button>
+                    <button class="btn btn-link btn-sm avatar-upload-cancel" type="button"
+                            id="avatarCancelButton">Cancel</button>
                 </div>
-            }
+
+                @* Only rendered with text when something is actually wrong, so the accepted
+                   file types are mentioned on rejection rather than sitting there always. *@
+                <p class="avatar-upload-error" id="avatarUploadError" role="alert" hidden></p>
+            </div>
         }
     </div>
     @if (Model.IsOwnProfile)

@@ -590,11 +590,18 @@ function attachAnswerPagination() {
                 const href = template.replace('__ID__', encodeURIComponent(entry.userId));
                 const saveLabel = entry.saveCount === 1 ? 'save' : 'saves';
 
+                // Mirrors the Razor markup so a live-refreshed row is indistinguishable
+                // from a server-rendered one, uploaded avatar and initials fallback alike.
+                const avatar = entry.avatarUrl
+                    ? `<img src="${htmlEncode(entry.avatarUrl)}" alt="" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';"/>` +
+                      `<span class="leaderboard-avatar-initials" style="display:none;">${htmlEncode(entry.initials)}</span>`
+                    : `<span class="leaderboard-avatar-initials">${htmlEncode(entry.initials)}</span>`;
+
                 const li = document.createElement('li');
                 li.className = `leaderboard-entry rank-${rank}`;
                 li.innerHTML = `
                     <span class="leaderboard-rank" aria-label="Rank ${rank}">${rank}</span>
-                    <span class="leaderboard-avatar">${htmlEncode(entry.initials)}</span>
+                    <span class="leaderboard-avatar">${avatar}</span>
                     <div class="leaderboard-info">
                         <a class="leaderboard-name" href="${href}" data-profile-card-user-id="${htmlEncode(entry.userId)}">${htmlEncode(entry.name)}</a>
                         <span class="leaderboard-rep">${entry.saveCount} ${saveLabel}</span>
@@ -671,25 +678,91 @@ function attachAnswerPagination() {
         return `Upload failed (${response.status}).`;
     }
 
-    async function upload(container) {
-        const input = document.getElementById('avatarFile');
-        const button = document.getElementById('avatarUploadButton');
-        const status = document.getElementById('avatarUploadStatus');
-        const file = input && input.files ? input.files[0] : null;
+    // Kept deliberately in step with ProfileImageValidator on the server: the same three
+    // types and the same 2 MB ceiling, so the usual rejections cost no round trip.
+    const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+    const ALLOWED_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.webp'];
+    const MAX_BYTES = 2 * 1024 * 1024;
 
+    function elements() {
+        return {
+            container: document.getElementById('avatarUpload'),
+            input: document.getElementById('avatarFile'),
+            pending: document.getElementById('avatarUploadPending'),
+            fileName: document.getElementById('avatarFileName'),
+            uploadButton: document.getElementById('avatarUploadButton'),
+            error: document.getElementById('avatarUploadError')
+        };
+    }
+
+    function showError(el, message) {
+        el.error.textContent = message;
+        el.error.hidden = false;
+    }
+
+    function clearError(el) {
+        el.error.textContent = '';
+        el.error.hidden = true;
+    }
+
+    // Back to the resting state: the camera button alone, nothing else on the page.
+    function reset(el) {
+        el.input.value = '';
+        el.pending.hidden = true;
+        el.fileName.textContent = '';
+        clearError(el);
+    }
+
+    function looksLikeAnImage(file) {
+        if (ALLOWED_TYPES.includes(file.type)) return true;
+        // A browser that reported a type we do not accept is a real rejection; one that
+        // reported nothing at all leaves the extension as the only hint.
+        if (file.type) return false;
+
+        const name = file.name.toLowerCase();
+        return ALLOWED_EXTENSIONS.some((extension) => name.endsWith(extension));
+    }
+
+    function chosen(el) {
+        const file = el.input.files && el.input.files[0];
+        if (!file) return;
+
+        if (!looksLikeAnImage(file)) {
+            // The accepted types are named here, on rejection, rather than sitting on
+            // the page permanently.
+            reset(el);
+            showError(el, 'That file type is not supported. Choose a JPEG, PNG, or WebP image.');
+            return;
+        }
+
+        if (file.size > MAX_BYTES) {
+            reset(el);
+            showError(el, 'That image is larger than 2 MB. Choose a smaller one.');
+            return;
+        }
+
+        clearError(el);
+        el.fileName.textContent = file.name;
+        el.pending.hidden = false;
+    }
+
+    async function upload(el) {
+        const file = el.input.files && el.input.files[0];
         if (!file) {
-            status.textContent = 'Choose an image first.';
+            reset(el);
             return;
         }
 
         const body = new FormData();
         body.append('file', file);
 
-        button.disabled = true;
-        status.textContent = 'Uploading...';
+        el.uploadButton.disabled = true;
+        const originalLabel = el.uploadButton.textContent;
+        el.uploadButton.textContent = 'Uploading...';
+        clearError(el);
 
         try {
-            const response = await fetch(container.dataset.uploadUrl, {
+            const response = await fetch(el.container.dataset.uploadUrl, {
                 method: 'POST',
                 headers: {
                     'Accept': 'application/json',
@@ -699,7 +772,7 @@ function attachAnswerPagination() {
             });
 
             if (!response.ok) {
-                status.textContent = await errorMessage(response);
+                showError(el, await errorMessage(response));
                 return;
             }
 
@@ -715,21 +788,29 @@ function attachAnswerPagination() {
                 if (initials) initials.style.display = 'none';
             }
 
-            input.value = '';
-            status.textContent = 'Profile image updated.';
+            // The changed avatar is the confirmation, so collapse back to the button
+            // instead of leaving a success message behind.
+            reset(el);
         } catch (error) {
             console.error('Failed to upload profile image', error);
-            status.textContent = 'Upload failed. Please try again.';
+            showError(el, 'Upload failed. Please try again.');
         } finally {
-            button.disabled = false;
+            el.uploadButton.disabled = false;
+            el.uploadButton.textContent = originalLabel;
         }
     }
 
     document.addEventListener('DOMContentLoaded', function () {
-        const container = document.getElementById('avatarUpload');
-        if (!container) return;
+        const el = elements();
+        if (!el.container || !el.input) return;
 
-        const button = document.getElementById('avatarUploadButton');
-        if (button) button.addEventListener('click', () => upload(container));
+        const pickButton = document.getElementById('avatarPickButton');
+        if (pickButton) pickButton.addEventListener('click', () => el.input.click());
+
+        el.input.addEventListener('change', () => chosen(el));
+        if (el.uploadButton) el.uploadButton.addEventListener('click', () => upload(el));
+
+        const cancelButton = document.getElementById('avatarCancelButton');
+        if (cancelButton) cancelButton.addEventListener('click', () => reset(el));
     });
 })();
