@@ -727,14 +727,19 @@ public partial class ThreadController : Controller
         var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
         var isModerator = userId != null
             && await _context.Users.AnyAsync(u => u.Id == userId && u.IsModerator);
-        if (thread.UserId != userId && !isModerator)
+        if ((thread.UserId != userId && !isModerator) || (thread.LockedByAdmin && !isModerator))
             return Forbid();
 
         thread.IsLocked = !thread.IsLocked;
-        _context.SaveChanges();
+        if (!thread.IsLocked)
+        {
+            thread.LockedByAdmin = false;
+        }
+        else
+        {
+            thread.LockedByAdmin = isModerator;
+        }
+        await _context.SaveChangesAsync();
         return RedirectToAction(nameof(Detail), new { id });
     }
-
-    [GeneratedRegex(@"^[a-z0-9][a-z0-9+#.\-]{0,24}$", RegexOptions.Compiled)]
-    private static partial Regex MyRegex();
 }
