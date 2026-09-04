@@ -1,4 +1,4 @@
-﻿@page
+@page
 @model GenerateRecoveryCodesModel
 @{
     ViewData["Title"] = "Generate two-factor authentication (2FA) recovery codes";
@@ -6,7 +6,7 @@
 }
 
 <partial name="_StatusMessage" for="StatusMessage" />
-<h3>@ViewData["Title"]</h3>
+<h2 class="auth-title" style="font-size:1.2rem;">@ViewData["Title"]</h2>
 <div class="alert alert-warning" role="alert">
     <p>
         <span class="glyphicon glyphicon-warning-sign"></span>
@@ -20,8 +20,6 @@
         used in an authenticator app you should <a asp-page="./ResetAuthenticator">reset your authenticator keys.</a>
     </p>
 </div>
-<div>
-    <form method="post">
-        <button class="btn btn-danger" type="submit">Generate Recovery Codes</button>
-    </form>
-</div>
+<form method="post">
+    <button class="btn btn-danger" type="submit">Generate Recovery Codes</button>
+</form>

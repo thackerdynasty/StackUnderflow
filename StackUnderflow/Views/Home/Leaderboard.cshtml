@@ -1,0 +1,133 @@
+@model LeaderboardViewModel
+
+@{
+    ViewData["Title"] = "Leaderboard";
+    var currentPage = (int)(ViewData["CurrentPage"] ?? 1);
+    var totalPages = (int)(ViewData["TotalPages"] ?? 1);
+
+    // The option currently being sorted on, used to emphasise the matching stat.
+    var activeOption = LeaderboardViewModel.Options.First(o => o.Key == Model.Sort);
+
+    // Page numbers to show, with -1 marking an ellipsis gap. Mirrors the JS pager
+    // on the questions page: always show first/last plus a window around current.
+    var pageItems = new List<int>();
+    if (totalPages > 1)
+    {
+        const int delta = 2;
+        var left = Math.Max(2, currentPage - delta);
+        var right = Math.Min(totalPages - 1, currentPage + delta);
+        pageItems.Add(1);
+        if (left > 2) pageItems.Add(-1);
+        for (var p = left; p <= right; p++) pageItems.Add(p);
+        if (right < totalPages - 1) pageItems.Add(-1);
+        pageItems.Add(totalPages);
+    }
+}
+
+@* Renders one stat block, without the "muted" class when it drives the sort. *@
+@{
+    void RenderStat(LeaderboardSortOption option, int value)
+    {
+        var isActive = option.Key == Model.Sort;
+        var unit = value == 1 ? option.UnitSingular : option.UnitPlural;
+        <div class="stat @(isActive ? null : "muted")">
+            <strong>@value</strong>
+            <span>@unit</span>
+        </div>
+    }
+}
+
+<section class="questions-shell">
+    <div class="questions-header">
+        <div>
+            <h1>Leaderboard</h1>
+            <p>The highest ranked StackUnderflow users, sorted by @activeOption.Label.ToLower().</p>
+        </div>
+    </div>
+
+    <div class="question-toolbar">
+        <div class="question-search">
+            <form method="get">
+                <input type="hidden" name="sort" value="@Model.Sort"/>
+                <input name="query" value="@Model.Query" placeholder="Search users..."/>
+            </form>
+        </div>
+        <div class="question-tabs" aria-label="Leaderboard sort options">
+            @foreach (var option in LeaderboardViewModel.Options)
+            {
+                var isActive = option.Key == Model.Sort;
+                <a class="question-tab @(isActive ? "active" : null)"
+                   aria-pressed="@(isActive ? "true" : "false")"
+                   asp-controller="Home"
+                   asp-action="Leaderboard"
+                   asp-route-sort="@option.Key"
+                   asp-route-query="@Model.Query">@option.Label</a>
+            }
+        </div>
+    </div>
+
+    @if (Model.Rows.Count == 0)
+    {
+        <div class="empty-questions">
+            <h2>No users found</h2>
+            <p>Try a different search, or check back once more users have joined.</p>
+        </div>
+    }
+    else
+    {
+        <ol class="leaderboard-list leaderboard-list-full">
+            @foreach (var row in Model.Rows)
+            {
+                <li class="leaderboard-entry rank-@row.Rank">
+                    <span class="leaderboard-rank" aria-label="Rank @row.Rank">@row.Rank</span>
+                    <span class="leaderboard-avatar">@row.Initials</span>
+                    <div class="leaderboard-info">
+                        <a class="leaderboard-name"
+                           asp-controller="Profile" asp-action="Details" asp-route-id="@row.UserId"
+                           data-profile-card-user-id="@row.UserId">@row.Name</a>
+                    </div>
+                    <div class="question-stats" aria-label="User stats">
+                        @{ RenderStat(LeaderboardViewModel.Options[0], row.Reputation); }
+                        @{ RenderStat(LeaderboardViewModel.Options[1], row.SavedCount); }
+                        @{ RenderStat(LeaderboardViewModel.Options[2], row.AcceptedAnswerCount); }
+                    </div>
+                </li>
+            }
+        </ol>
+
+        @if (totalPages > 1)
+        {
+            <nav class="question-pagination" aria-label="Leaderboard pages">
+                @if (currentPage > 1)
+                {
+                    <a class="page-button" aria-label="Previous page"
+                       asp-action="Leaderboard" asp-route-sort="@Model.Sort"
+                       asp-route-query="@Model.Query" asp-route-page="@(currentPage - 1)">Previous</a>
+                }
+                @foreach (var p in pageItems)
+                {
+                    if (p == -1)
+                    {
+                        <span class="page-ellipsis">…</span>
+                    }
+                    else if (p == currentPage)
+                    {
+                        <span class="page-button active" aria-current="page">@p</span>
+                    }
+                    else
+                    {
+                        <a class="page-button" aria-label="Page @p"
+                           asp-action="Leaderboard" asp-route-sort="@Model.Sort"
+                           asp-route-query="@Model.Query" asp-route-page="@p">@p</a>
+                    }
+                }
+                @if (currentPage < totalPages)
+                {
+                    <a class="page-button" aria-label="Next page"
+                       asp-action="Leaderboard" asp-route-sort="@Model.Sort"
+                       asp-route-query="@Model.Query" asp-route-page="@(currentPage + 1)">Next</a>
+                }
+            </nav>
+        }
+    }
+</section>

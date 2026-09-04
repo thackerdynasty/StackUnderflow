@@ -16,30 +16,6 @@
         </div>
         <a asp-controller="Thread" asp-action="Create" class="btn btn-primary ask-button">Ask Question</a>
     </div>
-
-    <section class="leaderboard" id="leaderboard" aria-label="Top users by saved threads"
-             data-leaderboard-url="@Url.Action("Leaderboard", "SavedThreadApi")"
-             data-profile-url-template="@Url.Action("Details", "Profile", new { id = "__ID__" })"
-             @(Model.Leaderboard.Count == 0 ? "hidden" : "")>
-        <h2 class="leaderboard-title">Top Users</h2>
-        <ol class="leaderboard-list" id="leaderboard-list">
-            @{ var rank = 0; }
-            @foreach (var entry in Model.Leaderboard)
-            {
-                rank++;
-                <li class="leaderboard-entry rank-@rank">
-                    <span class="leaderboard-rank" aria-label="Rank @rank">@rank</span>
-                    <span class="leaderboard-avatar">@entry.Initials</span>
-                    <div class="leaderboard-info">
-                        <a class="leaderboard-name"
-                           asp-controller="Profile" asp-action="Details" asp-route-id="@entry.UserId"
-                           data-profile-card-user-id="@entry.UserId">@entry.Name</a>
-                        <span class="leaderboard-rep">@entry.SaveCount @(entry.SaveCount == 1 ? "save" : "saves")</span>
-                    </div>
-                </li>
-            }
-        </ol>
-    </section>
     
     <div class="question-toolbar">
         <div class="question-search">

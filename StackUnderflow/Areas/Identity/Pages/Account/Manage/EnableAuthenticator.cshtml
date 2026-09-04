@@ -1,4 +1,4 @@
-﻿@page
+@page
 @model EnableAuthenticatorModel
 @{
     ViewData["Title"] = "Configure authenticator app";
@@ -6,7 +6,7 @@
 }
 
 <partial name="_StatusMessage" for="StatusMessage" />
-<h3>@ViewData["Title"]</h3>
+<h2 class="auth-title" style="font-size:1.2rem;">@ViewData["Title"]</h2>
 <div>
     <p>To use an authenticator app go through the following steps:</p>
     <ol class="list">
@@ -31,19 +31,15 @@
                 Once you have scanned the QR code or input the key above, your two factor authentication app will provide you
                 with a unique code. Enter the code in the confirmation box below.
             </p>
-            <div class="row">
-                <div class="col-md-6">
-                    <form id="send-code" method="post">
-                        <div class="form-floating mb-3">
-                            <input asp-for="Input.Code" class="form-control" autocomplete="off" placeholder="Please enter the code."/>
-                            <label asp-for="Input.Code" class="control-label form-label">Verification Code</label>
-                            <span asp-validation-for="Input.Code" class="text-danger"></span>
-                        </div>
-                        <button type="submit" class="w-100 btn btn-lg btn-primary">Verify</button>
-                        <div asp-validation-summary="ModelOnly" class="text-danger" role="alert"></div>
-                    </form>
+            <form id="send-code" method="post" class="auth-form">
+                <div class="mb-3">
+                    <label asp-for="Input.Code" class="control-label form-label">Verification Code</label>
+                    <input asp-for="Input.Code" class="form-control" autocomplete="off" placeholder="Please enter the code." />
+                    <span asp-validation-for="Input.Code" class="text-danger"></span>
                 </div>
-            </div>
+                <button type="submit" class="btn btn-primary">Verify</button>
+                <div asp-validation-summary="ModelOnly" class="text-danger" role="alert"></div>
+            </form>
         </li>
     </ol>
 </div>
