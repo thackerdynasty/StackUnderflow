@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using StackUnderflow.Data;
 using StackUnderflow.Models;
+using StackUnderflow.Services.ProfileImages;
 using StackUnderflow.Services;
 using StackUnderflow.Utilities;
 
@@ -27,12 +28,17 @@ builder.Services.AddHostedService<StackUnderflow.Services.ThreadAutoLockService>
 // Let fetch()-based API calls send the antiforgery token via a request header.
 builder.Services.AddAntiforgery(options => options.HeaderName = "RequestVerificationToken");
 
+// Profile image storage. Falls back to a no-op implementation when no Azure
+// Storage connection string is configured, leaving the rest of the app unchanged.
+builder.Services.AddProfileImageStorage(builder.Configuration);
 builder.Services.AddAuthorization(options =>
 {
     options.AddPolicy("IsModerator", policy => policy.AddRequirements(new ModeratorUserRequirement()));
 });
 
 var app = builder.Build();
+
+app.LogProfileImageStorageStatus();
 
 using (var scope = app.Services.CreateScope())
 {
