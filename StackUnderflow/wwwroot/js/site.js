@@ -91,6 +91,8 @@ function attachLivePreview(textareaSelector, previewSelector) {
 
 // Attach to the answer textarea preview
 document.addEventListener('DOMContentLoaded', function() {
+    const tagMode = document.querySelector('.search-tag-mode input');
+    tagMode?.addEventListener('change', () => tagMode.form.requestSubmit());
     attachLivePreview('#answer-content', '#answer-preview');
     attachLivePreview('#thread-content', '#thread-preview');
     attachQuestionFilters();
@@ -369,6 +371,7 @@ function attachThreadPagination() {
 
     const pageSize = Number(nav.dataset.pageSize) || 20;
     const searchQuery = nav.dataset.search || '';
+    const tagModeParam = nav.dataset.requireAllTags === 'true' ? '&requireAllTags=true' : '';
     let totalPages = Number(nav.dataset.totalPages) || 1;
     let currentPage = Number(nav.dataset.currentPage) || 1;
     let activeFilter = 'new';
@@ -432,6 +435,18 @@ function attachThreadPagination() {
         // Set user-controlled text via textContent to avoid HTML injection.
         article.querySelector('.question-content h2 a').textContent = thread.title || '';
         article.querySelector('.question-meta a').textContent = thread.authorName || 'unknown user';
+
+        if (thread.tags?.length > 0) {
+            const tags = document.createElement('div');
+            tags.className = 'question-tags';
+            thread.tags.forEach((name) => {
+                const badge = document.createElement('span');
+                badge.className = 'badge bg-secondary';
+                badge.textContent = name;
+                tags.appendChild(badge);
+            });
+            article.querySelector('.question-content h2').after(tags);
+        }
 
         // Render fenced code blocks the same way the server does (ContentParser.RenderCodeBlocks).
         // renderCodeFencePreview HTML-escapes all non-code text, so this stays injection-safe.
@@ -507,7 +522,7 @@ function attachThreadPagination() {
         try {
             const searchParam = searchQuery ? `&search=${encodeURIComponent(searchQuery)}` : '';
             const filterParam = activeFilter !== 'new' ? `&filter=${encodeURIComponent(activeFilter)}` : '';
-            const response = await fetch(`/api/Thread/paginated?page=${page}&pageSize=${pageSize}${searchParam}${filterParam}`, {
+            const response = await fetch(`/api/Thread/paginated?page=${page}&pageSize=${pageSize}${searchParam}${filterParam}${tagModeParam}`, {
                 headers: { 'Accept': 'application/json' }
             });
             if (!response.ok) throw new Error(`Request failed: ${response.status}`);

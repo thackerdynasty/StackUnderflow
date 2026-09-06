@@ -291,6 +291,44 @@ body {
   flex: 1;
 }
 
+.search-tags {
+  margin-top: .5rem;
+}
+
+.search-tag-mode {
+  display: flex;
+  align-items: center;
+  gap: .4rem;
+  margin-top: .5rem;
+  font-size: .875rem;
+  cursor: pointer;
+}
+
+.search-tags .badge {
+  display: inline-flex;
+  align-items: center;
+  gap: .25rem;
+}
+
+.remove-search-tag {
+  border: 0;
+  padding: 0 .15rem;
+  background: transparent;
+  color: inherit;
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.remove-search-tag:hover {
+  opacity: .75;
+}
+
+.remove-search-tag:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
+}
+
 .ask-button {
   white-space: nowrap;
   border-radius: 3px;
@@ -487,6 +525,12 @@ body {
 
 .question-content h2 a:hover {
   color: #0a95ff;
+}
+
+.question-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .25rem;
 }
 
 .question-content p {
