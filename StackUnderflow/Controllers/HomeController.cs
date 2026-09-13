@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using StackUnderflow.Data;
 using StackUnderflow.Models;
 using StackUnderflow.Services;
+using StackUnderflow.Utilities;
 using StackUnderflow.Services.ProfileImages;
 
 namespace StackUnderflow.Controllers;
@@ -22,8 +23,9 @@ public class HomeController : Controller
     
     private const int PageSize = 5;
 
-    public async Task<IActionResult> Index()
+    public async Task<IActionResult> Index(bool requireAllTags = false)
     {
+        ViewData["RequireAllTags"] = requireAllTags;
         var totalCount = _context.SUThreads.Count();
 
         List<SUThread> threads = _context.SUThreads
@@ -51,21 +53,23 @@ public class HomeController : Controller
     }
 
     [HttpPost]
-    public async Task<IActionResult> Index(string query)
+    public async Task<IActionResult> Index(string? query, string[]? tags = null, string? removeTag = null, bool requireAllTags = false)
     {
-        if (string.IsNullOrEmpty(query))
+        var search = new ThreadSearch(query, tags, removeTag, requireAllTags);
+        if (search.Query.Length == 0)
         {
-            return RedirectToAction("Index");
+            return RedirectToAction("Index", new { requireAllTags });
         }
-        
-        var filtered = _context.SUThreads
-            .Where(t => t.Title.Contains(query) || t.Content.Contains(query));
+
+        var filtered = search.Apply(_context.SUThreads);
 
         var totalCount = filtered.Count();
 
         var threads = filtered
             .Include(t => t.User)
             .Include(t => t.Posts)
+            .Include(t => t.ThreadTags)
+            .ThenInclude(tt => tt.Tag)
             .OrderByDescending(t => t.CreatedAt)
             .ThenByDescending(t => t.Id)
             .Take(PageSize)
@@ -75,7 +79,10 @@ public class HomeController : Controller
         ViewData["CurrentPage"] = 1;
         ViewData["TotalPages"] = (int)Math.Ceiling((double)totalCount / PageSize);
 
-        ViewData["Query"] = query;
+        ViewData["Query"] = search.Query;
+        ViewData["SearchText"] = search.Text;
+        ViewData["SearchTags"] = search.Tags;
+        ViewData["RequireAllTags"] = requireAllTags;
 
         var leaderboard = await LeaderboardService.GetTopAuthorsAsync(_context, 3, _profileImageStorage);
 
