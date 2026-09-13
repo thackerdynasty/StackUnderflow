@@ -38,7 +38,7 @@ public sealed class TagSearchModeTests
         await context.SaveChangesAsync();
         context.ChangeTracker.Clear();
 
-        var home = new HomeController(context);
+        var home = new HomeController(context, new FakeProfileImageStorage());
         var result = Assert.IsType<ViewResult>(await home.Index("Collections #csharp #dotnet #csharp", requireAllTags: requireAllTags));
         Assert.Equal(expectedCount, Assert.IsType<HomeViewModel>(result.Model).Threads.Count);
         Assert.Equal(requireAllTags, home.ViewData["RequireAllTags"]);
