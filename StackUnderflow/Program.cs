@@ -9,6 +9,14 @@ using StackUnderflow.Utilities;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Apply to every DefaultAzureCredential, including the one created internally by SqlClient.
+// Local development uses developer sign-ins, avoiding the Azure managed-identity probe.
+if (builder.Environment.IsDevelopment() &&
+    string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("AZURE_TOKEN_CREDENTIALS")))
+{
+    Environment.SetEnvironmentVariable("AZURE_TOKEN_CREDENTIALS", "dev");
+}
+
 // Load secrets from Azure Key Vault into configuration. Secret names use '--' in place
 // of ':' (e.g. "Authentication--GitHub--ClientSecret" maps to "Authentication:GitHub:ClientSecret").
 var keyVaultUri = builder.Configuration["KeyVault:VaultUri"];
