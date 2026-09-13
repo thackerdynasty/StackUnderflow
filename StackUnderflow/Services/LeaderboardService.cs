@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using StackUnderflow.Data;
 using StackUnderflow.Models;
+using StackUnderflow.Services.ProfileImages;
 
 namespace StackUnderflow.Services;
 
@@ -12,7 +13,10 @@ namespace StackUnderflow.Services;
 /// </summary>
 public static class LeaderboardService
 {
-    public static async Task<List<LeaderboardEntry>> GetTopAuthorsAsync(ApplicationDbContext context, int count)
+    public static async Task<List<LeaderboardEntry>> GetTopAuthorsAsync(
+        ApplicationDbContext context,
+        int count,
+        IProfileImageStorage profileImageStorage)
     {
         // Count saves grouped by the author of the saved thread, highest first.
         var ranked = await context.SavedThreads
@@ -28,7 +32,7 @@ public static class LeaderboardService
         var userIds = ranked.Select(r => r.UserId).ToList();
         var users = await context.Users
             .Where(u => userIds.Contains(u.Id))
-            .Select(u => new { u.Id, u.UserName, u.Email })
+            .Select(u => new { u.Id, u.UserName, u.Email, u.ProfilePicture, u.ProfileImagePath })
             .ToDictionaryAsync(u => u.Id);
 
         // Preserve the ranked order; drop any author whose account no longer exists.
@@ -43,7 +47,11 @@ public static class LeaderboardService
                     UserId = r.UserId,
                     Name = name,
                     Initials = string.IsNullOrEmpty(name) ? "?" : name[..1].ToUpperInvariant(),
-                    SaveCount = r.SaveCount
+                    SaveCount = r.SaveCount,
+                    // Uploaded image wins over the seeded picture; the seeded value is
+                    // left in the database so it still backs users who never upload.
+                    AvatarUrl = profileImageStorage.GetUrl(user.ProfileImagePath)
+                                ?? user.ProfilePicture?.ToString()
                 };
             })
             .ToList();

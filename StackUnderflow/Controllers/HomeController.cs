@@ -6,16 +6,19 @@ using StackUnderflow.Data;
 using StackUnderflow.Models;
 using StackUnderflow.Services;
 using StackUnderflow.Utilities;
+using StackUnderflow.Services.ProfileImages;
 
 namespace StackUnderflow.Controllers;
 
 public class HomeController : Controller
 {
     private readonly ApplicationDbContext _context;
-    
-    public HomeController(ApplicationDbContext context)
+    private readonly IProfileImageStorage _profileImageStorage;
+
+    public HomeController(ApplicationDbContext context, IProfileImageStorage profileImageStorage)
     {
         _context = context;
+        _profileImageStorage = profileImageStorage;
     }
     
     private const int PageSize = 5;
@@ -40,7 +43,7 @@ public class HomeController : Controller
         ViewData["CurrentPage"] = 1;
         ViewData["TotalPages"] = (int)Math.Ceiling((double)totalCount / PageSize);
 
-        var leaderboard = await LeaderboardService.GetTopAuthorsAsync(_context, 3);
+        var leaderboard = await LeaderboardService.GetTopAuthorsAsync(_context, 3, _profileImageStorage);
 
         return View(new HomeViewModel
         {
@@ -81,7 +84,7 @@ public class HomeController : Controller
         ViewData["SearchTags"] = search.Tags;
         ViewData["RequireAllTags"] = requireAllTags;
 
-        var leaderboard = await LeaderboardService.GetTopAuthorsAsync(_context, 3);
+        var leaderboard = await LeaderboardService.GetTopAuthorsAsync(_context, 3, _profileImageStorage);
 
         return View(new HomeViewModel
         {

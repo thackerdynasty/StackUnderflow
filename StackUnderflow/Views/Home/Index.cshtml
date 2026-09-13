@@ -31,7 +31,18 @@
                 rank++;
                 <li class="leaderboard-entry rank-@rank">
                     <span class="leaderboard-rank" aria-label="Rank @rank">@rank</span>
-                    <span class="leaderboard-avatar">@entry.Initials</span>
+                    <span class="leaderboard-avatar">
+                        @if (entry.AvatarUrl is not null)
+                        {
+                            <img src="@entry.AvatarUrl" alt=""
+                                 onerror="this.style.display='none';this.nextElementSibling.style.display='flex';"/>
+                            <span class="leaderboard-avatar-initials" style="display:none;">@entry.Initials</span>
+                        }
+                        else
+                        {
+                            <span class="leaderboard-avatar-initials">@entry.Initials</span>
+                        }
+                    </span>
                     <div class="leaderboard-info">
                         <a class="leaderboard-name"
                            asp-controller="Profile" asp-action="Details" asp-route-id="@entry.UserId"
