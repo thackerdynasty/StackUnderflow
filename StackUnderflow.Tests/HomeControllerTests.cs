@@ -59,7 +59,7 @@ public sealed class HomeControllerTests
         await context.SaveChangesAsync();
         context.ChangeTracker.Clear();
 
-        var controller = new HomeController(context);
+        var controller = new HomeController(context, new FakeProfileImageStorage());
         var result = Assert.IsType<ViewResult>(await controller.Index(query));
         var model = Assert.IsType<HomeViewModel>(result.Model);
 
@@ -89,7 +89,7 @@ public sealed class HomeControllerTests
     [Fact]
     public async Task Index_RemovingLastTagWithoutTextReturnsToUnfilteredHome()
     {
-        var controller = new HomeController(null!);
+        var controller = new HomeController(null!, new FakeProfileImageStorage());
         var result = Assert.IsType<RedirectToActionResult>(await controller.Index("", ["csharp"], "csharp"));
         Assert.Equal("Index", result.ActionName);
     }
