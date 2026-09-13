@@ -24,6 +24,7 @@
             const label = theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode';
             picker.setAttribute('aria-label', label);
             picker.setAttribute('title', label);
+            picker.setAttribute('aria-pressed', theme === 'dark' ? 'true' : 'false');
         }
     };
 
