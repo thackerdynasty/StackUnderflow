@@ -1,4 +1,4 @@
-﻿@page
+@page
 @model ResetAuthenticatorModel
 @{
     ViewData["Title"] = "Reset authenticator key";
@@ -6,7 +6,7 @@
 }
 
 <partial name="_StatusMessage" for="StatusMessage" />
-<h3>@ViewData["Title"]</h3>
+<h2 class="auth-title" style="font-size:1.2rem;">@ViewData["Title"]</h2>
 <div class="alert alert-warning" role="alert">
     <p>
         <span class="glyphicon glyphicon-warning-sign"></span>
@@ -17,8 +17,6 @@
         If you do not complete your authenticator app configuration you may lose access to your account.
     </p>
 </div>
-<div>
-    <form id="reset-authenticator-form" method="post">
-        <button id="reset-authenticator-button" class="btn btn-danger" type="submit">Reset authenticator key</button>
-    </form>
-</div>
+<form id="reset-authenticator-form" method="post">
+    <button id="reset-authenticator-button" class="btn btn-danger" type="submit">Reset authenticator key</button>
+</form>

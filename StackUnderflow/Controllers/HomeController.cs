@@ -4,21 +4,17 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using StackUnderflow.Data;
 using StackUnderflow.Models;
-using StackUnderflow.Services;
 using StackUnderflow.Utilities;
-using StackUnderflow.Services.ProfileImages;
 
 namespace StackUnderflow.Controllers;
 
 public class HomeController : Controller
 {
     private readonly ApplicationDbContext _context;
-    private readonly IProfileImageStorage _profileImageStorage;
 
-    public HomeController(ApplicationDbContext context, IProfileImageStorage profileImageStorage)
+    public HomeController(ApplicationDbContext context)
     {
         _context = context;
-        _profileImageStorage = profileImageStorage;
     }
     
     private const int PageSize = 5;
@@ -43,12 +39,9 @@ public class HomeController : Controller
         ViewData["CurrentPage"] = 1;
         ViewData["TotalPages"] = (int)Math.Ceiling((double)totalCount / PageSize);
 
-        var leaderboard = await LeaderboardService.GetTopAuthorsAsync(_context, 3, _profileImageStorage);
-
         return View(new HomeViewModel
         {
             Threads = threads,
-            Leaderboard = leaderboard
         });
     }
 
@@ -84,12 +77,83 @@ public class HomeController : Controller
         ViewData["SearchTags"] = search.Tags;
         ViewData["RequireAllTags"] = requireAllTags;
 
-        var leaderboard = await LeaderboardService.GetTopAuthorsAsync(_context, 3, _profileImageStorage);
-
         return View(new HomeViewModel
         {
             Threads = threads,
-            Leaderboard = leaderboard
+        });
+    }
+    private const int LeaderboardPageSize = 5;
+
+    // Ranked users, sorted by one of the leaderboard options (reputation / saves /
+    // accepted answers). Every option is computed the same way — a projection over
+    // the user — and paged via the query string (?sort=&query=&page=).
+    public async Task<IActionResult> Leaderboard(string? sort = null, string? query = null, int page = 1)
+    {
+        sort = LeaderboardViewModel.NormalizeSort(sort);
+        page = Math.Max(1, page);
+
+        var users = _context.Users.AsQueryable();
+        if (!string.IsNullOrWhiteSpace(query))
+        {
+            users = users.Where(u =>
+                (u.UserName != null && u.UserName.Contains(query)) ||
+                (u.Email != null && u.Email.Contains(query)));
+        }
+
+        // Order on the same expressions the row projection uses, with Id as a stable
+        // tiebreak so pages never overlap or skip. Reputation is the secondary sort
+        // for the count-based options so ties resolve sensibly.
+        var ordered = sort switch
+        {
+            LeaderboardViewModel.Saved => users
+                .OrderByDescending(u => u.SUThreads.SelectMany(t => t.SavedBy).Count())
+                .ThenByDescending(u => u.Reputation)
+                .ThenBy(u => u.Id),
+            LeaderboardViewModel.Accepted => users
+                .OrderByDescending(u => u.Posts.Count(p => p.IsAcceptedAnswer))
+                .ThenByDescending(u => u.Reputation)
+                .ThenBy(u => u.Id),
+            _ => users
+                .OrderByDescending(u => u.Reputation)
+                .ThenBy(u => u.Id),
+        };
+
+        var totalCount = await users.CountAsync();
+        var totalPages = Math.Max(1, (int)Math.Ceiling((double)totalCount / LeaderboardPageSize));
+
+        var rows = await ordered
+            .Skip((page - 1) * LeaderboardPageSize)
+            .Take(LeaderboardPageSize)
+            .Select(u => new LeaderboardRow
+            {
+                UserId = u.Id,
+                Name = u.UserName ?? u.Email ?? "User",
+                Reputation = u.Reputation,
+                SavedCount = u.SUThreads.SelectMany(t => t.SavedBy).Count(),
+                AcceptedAnswerCount = u.Posts.Count(p => p.IsAcceptedAnswer),
+            })
+            .ToListAsync();
+
+        // Fill in the display name (strip any email domain) + avatar initial + global
+        // rank in memory, once the page has been fetched.
+        for (var i = 0; i < rows.Count; i++)
+        {
+            var row = rows[i];
+            var at = row.Name.IndexOf('@');
+            if (at > 0) row.Name = row.Name[..at];
+            row.Initials = string.IsNullOrEmpty(row.Name) ? "?" : row.Name[..1].ToUpperInvariant();
+            row.Rank = ((page - 1) * LeaderboardPageSize) + i + 1;
+        }
+
+        ViewData["PageSize"] = LeaderboardPageSize;
+        ViewData["CurrentPage"] = page;
+        ViewData["TotalPages"] = totalPages;
+
+        return View(new LeaderboardViewModel
+        {
+            Rows = rows,
+            Sort = sort,
+            Query = query,
         });
     }
 
