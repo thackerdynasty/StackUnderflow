@@ -6,6 +6,7 @@ using StackUnderflow.Data;
 using StackUnderflow.Extensions;
 using StackUnderflow.Models;
 using StackUnderflow.Services;
+using StackUnderflow.Utilities;
 using System.Security.Claims;
 
 namespace StackUnderflow.Areas.Api;
@@ -21,14 +22,18 @@ public class ThreadController(ApplicationDbContext context, ThreadVoteService vo
     [HttpGet]
     public async Task<ActionResult<IEnumerable<SUThread>>> GetSUThreads()
     {
-        return await _context.SUThreads.ToListAsync();
+        return await _context.SUThreads
+            .Include(t => t.ThreadTags)
+            .ThenInclude(tt => tt.Tag)
+            .ToListAsync();
     }
 
     [HttpGet("paginated")]
     public async Task<ActionResult<PaginatedResponse<ThreadSummaryDto>>> GetSUThreadsPaginated(
         [FromQuery] PaginationRequest pagination,
         [FromQuery] string? search = null,
-        [FromQuery] string? filter = null)
+        [FromQuery] string? filter = null,
+        [FromQuery] bool requireAllTags = false)
     {
         if (!ModelState.IsValid)
         {
@@ -37,11 +42,11 @@ public class ThreadController(ApplicationDbContext context, ThreadVoteService vo
 
         var recentCutoff = DateTime.UtcNow.AddDays(-7);
 
-        var threads = _context.SUThreads.AsQueryable();
-        if (!string.IsNullOrWhiteSpace(search))
-        {
-            threads = threads.Where(t => t.Title.Contains(search) || t.Content.Contains(search));
-        }
+        var threads = _context.SUThreads
+            .Include(t => t.ThreadTags)
+            .ThenInclude(tt => tt.Tag)
+            .AsQueryable();
+        threads = new ThreadSearch(search, requireAllTags: requireAllTags).Apply(threads);
 
         // Mirrors the home-page filter tabs; Id as a stable tiebreak so pages
         // don't overlap or skip.
@@ -73,6 +78,7 @@ public class ThreadController(ApplicationDbContext context, ThreadVoteService vo
                 Id = t.Id,
                 Title = t.Title,
                 Content = t.Content,
+                Tags = t.ThreadTags.Select(tt => tt.Tag.Name).ToList(),
                 CreatedAt = t.CreatedAt,
                 ViewCount = t.ViewCount,
                 UpvoteCount = t.UpvoteCount,
