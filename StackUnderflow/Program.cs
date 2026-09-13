@@ -1,3 +1,4 @@
+using Azure.Identity;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -9,6 +10,28 @@ using StackUnderflow.Utilities;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Apply to every DefaultAzureCredential, including the one created internally by SqlClient.
+// Local development uses developer sign-ins, avoiding the Azure managed-identity probe.
+if (builder.Environment.IsDevelopment() &&
+    string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("AZURE_TOKEN_CREDENTIALS")))
+{
+    Environment.SetEnvironmentVariable("AZURE_TOKEN_CREDENTIALS", "dev");
+}
+
+// Load secrets from Azure Key Vault into configuration. Secret names use '--' in place
+// of ':' (e.g. "Authentication--GitHub--ClientSecret" maps to "Authentication:GitHub:ClientSecret").
+var keyVaultUri = builder.Configuration["KeyVault:VaultUri"];
+if (!string.IsNullOrWhiteSpace(keyVaultUri))
+{
+    var credential = new DefaultAzureCredential(new DefaultAzureCredentialOptions
+    {
+        // Skip the Managed Identity/IMDS probe locally — it hangs on machines where
+        // 169.254.169.254 isn't quickly refused. In Azure it IS available, so only exclude in dev.
+        ExcludeManagedIdentityCredential = builder.Environment.IsDevelopment()
+    });
+    builder.Configuration.AddAzureKeyVault(new Uri(keyVaultUri), credential);
+}
+
 // Add services to the container.
 var connectionString = builder.Configuration.GetConnectionString("ServerConnection") ??
                        throw new InvalidOperationException("Connection string 'ServerConnection' not found.");
@@ -16,8 +39,14 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlServer(connectionString));
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 
-builder.Services.AddDefaultIdentity<User>(options => options.SignIn.RequireConfirmedAccount = true)
+builder.Services.AddDefaultIdentity<User>(options => options.SignIn.RequireConfirmedAccount = false)
     .AddEntityFrameworkStores<ApplicationDbContext>();
+builder.Services.AddAuthentication()
+    .AddGitHub(options =>
+    {
+        options.ClientId = builder.Configuration["Authentication:GitHub:ClientId"];
+        options.ClientSecret = builder.Configuration["Authentication:GitHub:ClientSecret"];
+    });
 builder.Services.AddControllersWithViews();
 builder.Services.AddScoped<StackUnderflow.Services.ThreadVoteService>();
 builder.Services.AddScoped<StackUnderflow.Services.PostVoteService>();
