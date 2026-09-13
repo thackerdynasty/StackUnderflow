@@ -562,7 +562,7 @@ body {
 
 .stat.answered {
   color: var(--su-success);
-  border-color: #5eba7d;
+  border-color: var(--su-success-border);
 }
 
 .stat.answered strong {
