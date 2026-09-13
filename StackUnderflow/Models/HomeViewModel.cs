@@ -1,7 +1,7 @@
 namespace StackUnderflow.Models;
 
 /// <summary>
-/// Data shown on the home page: the top questions list plus the reputation leaderboard.
+/// Data shown on the home page: the top questions list.
 /// </summary>
 public class HomeViewModel
 {
