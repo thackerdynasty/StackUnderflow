@@ -9,6 +9,11 @@
 
     <ItemGroup>
         <PackageReference Include="AspNet.Security.OAuth.GitHub" Version="10.0.0" />
+        <PackageReference Include="Azure.Storage.Blobs" Version="12.29.1" />
+        <!-- Azure.Core already declares DefaultAzureCredential; Azure.Identity arrives
+             transitively and declares it too, so it is excluded at compile time (CS0433)
+             while staying available at runtime. -->
+        <PackageReference Include="Azure.Identity" Version="1.14.2" ExcludeAssets="compile" />
         <PackageReference Include="Azure.AI.ContentSafety" Version="1.0.0" />
         <PackageReference Include="Azure.Extensions.AspNetCore.Configuration.Secrets" Version="1.5.2" />
         <PackageReference Include="Azure.Identity" Version="1.21.0" />

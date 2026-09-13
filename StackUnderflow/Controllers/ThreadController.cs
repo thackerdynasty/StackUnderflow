@@ -16,7 +16,7 @@ public partial class ThreadController : Controller
     private readonly ThreadVoteService _voteService;
     private readonly PostVoteService _postVoteService;
     private readonly ContentSafetyAnalyzer _contentSafetyAnalyzer;
-    
+
     public ThreadController(ApplicationDbContext context, ThreadVoteService voteService, PostVoteService postVoteService, ContentSafetyAnalyzer contentSafetyAnalyzer)
     {
         _context = context;
@@ -24,6 +24,7 @@ public partial class ThreadController : Controller
         _postVoteService = postVoteService;
         _contentSafetyAnalyzer = contentSafetyAnalyzer;
     }
+
 
     [GeneratedRegex(@"^[a-z0-9][a-z0-9+#.\-]{0,24}$")]
     private static partial Regex TagNameRegex();
@@ -56,7 +57,7 @@ public partial class ThreadController : Controller
 
         return warnings.Count > 0 ? string.Join(" ", warnings) : null;
     }
-
+    
     // GET
     public IActionResult Index()
     {
@@ -718,17 +719,27 @@ public partial class ThreadController : Controller
     [Authorize]
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public IActionResult ToggleLock(int id)
+    public async Task<IActionResult> ToggleLock(int id)
     {
         var thread = _context.SUThreads.FirstOrDefault(t => t.Id == id);
         if (thread == null) return NotFound();
-        if (thread.UserId != User.FindFirst(ClaimTypes.NameIdentifier)?.Value)
+
+        var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        var isModerator = userId != null
+            && await _context.Users.AnyAsync(u => u.Id == userId && u.IsModerator);
+        if ((thread.UserId != userId && !isModerator) || (thread.LockedByAdmin && !isModerator))
             return Forbid();
+
         thread.IsLocked = !thread.IsLocked;
-        _context.SaveChanges();
+        if (!thread.IsLocked)
+        {
+            thread.LockedByAdmin = false;
+        }
+        else
+        {
+            thread.LockedByAdmin = isModerator;
+        }
+        await _context.SaveChangesAsync();
         return RedirectToAction(nameof(Detail), new { id });
     }
-
-    [GeneratedRegex(@"^[a-z0-9][a-z0-9+#.\-]{0,24}$", RegexOptions.Compiled)]
-    private static partial Regex MyRegex();
 }

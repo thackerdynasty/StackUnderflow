@@ -47,7 +47,11 @@ public class ThreadAutoLockService(IServiceScopeFactory scopeFactory, ILogger<Th
 
         var locked = await context.SUThreads
             .Where(t => t.IsSolved && !t.IsLocked && t.SolvedAt != null && t.SolvedAt <= cutoff)
-            .ExecuteUpdateAsync(setters => setters.SetProperty(t => t.IsLocked, true), ct);
+            .ExecuteUpdateAsync(setters =>
+            {
+                setters.SetProperty(t => t.IsLocked, true);
+                setters.SetProperty(t => t.LockedByAdmin, true);
+            }, ct);
 
         if (locked > 0)
         {

@@ -1,5 +1,7 @@
 @using System.Security.Claims
+@using Microsoft.AspNetCore.Authorization
 @using StackUnderflow.Utilities
+@inject IAuthorizationService AuthorizationService
 @model SUThread
 
 @{
@@ -101,7 +103,7 @@
             }
         </aside>
 
-        @if (isThreadOwner)
+        @if (isThreadOwner || (await AuthorizationService.AuthorizeAsync(User, "IsModerator")).Succeeded)
         {
             <div class="lock-form">
                 <button type="button" class="lock-control @(Model.IsLocked ? "is-locked" : "")"
@@ -205,9 +207,18 @@
 
         @if (Model.IsLocked)
         {
-            <div class="alert alert-secondary thread-locked-notice" role="status">
-                This thread is locked. New answers and comments can't be posted.
-            </div>
+            @if (Model.LockedByAdmin)
+            {
+                <div class="alert alert-secondary thread-locked-notice" role="status">
+                    This thread has been locked by an admin. New answers and comments can't be posted.
+                </div>
+            }
+            else
+            {
+                <div class="alert alert-secondary thread-locked-notice" role="status">
+                    This thread is locked. New answers and comments can't be posted.
+                </div>
+            }
         }
         else if (User.Identity?.IsAuthenticated == true)
         {

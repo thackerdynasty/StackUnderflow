@@ -1,8 +1,11 @@
+using System.Security.Claims;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using StackUnderflow.Areas.Api.Models;
 using StackUnderflow.Data;
 using StackUnderflow.Models;
+using StackUnderflow.Services.ProfileImages;
 
 namespace StackUnderflow.Areas.Api.Controllers;
 
@@ -10,9 +13,28 @@ namespace StackUnderflow.Areas.Api.Controllers;
 [Area("Api")]
 [Route("api/[controller]")]
 [Produces("application/json")]
-public class UserController(ApplicationDbContext dbContext) : ControllerBase
+public class UserController(
+    ApplicationDbContext dbContext,
+    IProfileImageStorage profileImageStorage) : ControllerBase
 {
     private readonly ApplicationDbContext _dbContext = dbContext;
+    private readonly IProfileImageStorage _profileImageStorage = profileImageStorage;
+
+    /// <summary>
+    /// The signed-in user's id, or null when the request is anonymous or the principal
+    /// carries no subject claim. [Authorize] already covers the first case; checking
+    /// here too keeps the rule assertable without middleware.
+    /// </summary>
+    private string? CurrentUserId => User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+    /// <summary>
+    /// Explicit 403 rather than Forbid(), which cookie authentication would turn into a
+    /// redirect to the login page — not useful to an API caller.
+    /// </summary>
+    private IActionResult ForbidOtherAccount(string action) => Problem(
+        title: "Forbidden",
+        detail: $"You can only {action} your own account.",
+        statusCode: StatusCodes.Status403Forbidden);
 
     // GET: /api/user
     [HttpGet]
@@ -47,11 +69,25 @@ public class UserController(ApplicationDbContext dbContext) : ControllerBase
 
     // PUT: /api/user/{id}
     [HttpPut("{id}")]
+    [Authorize]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Update(string id, UpdateUserDto dto, CancellationToken cancellationToken)
     {
+        var currentUserId = CurrentUserId;
+        if (string.IsNullOrEmpty(currentUserId))
+        {
+            return Unauthorized();
+        }
+
+        if (!string.Equals(id, currentUserId, StringComparison.Ordinal))
+        {
+            return ForbidOtherAccount("update");
+        }
+
         var user = await _dbContext.Users.FirstOrDefaultAsync(u => u.Id == id, cancellationToken);
         if (user is null)
         {
@@ -85,18 +121,41 @@ public class UserController(ApplicationDbContext dbContext) : ControllerBase
 
     // DELETE: /api/user/{id}
     [HttpDelete("{id}")]
+    [Authorize]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Delete(string id, CancellationToken cancellationToken)
     {
+        var currentUserId = CurrentUserId;
+        if (string.IsNullOrEmpty(currentUserId))
+        {
+            return Unauthorized();
+        }
+
+        if (!string.Equals(id, currentUserId, StringComparison.Ordinal))
+        {
+            return ForbidOtherAccount("delete");
+        }
+
         var user = await _dbContext.Users.FirstOrDefaultAsync(u => u.Id == id, cancellationToken);
         if (user is null)
         {
             return NotFound();
         }
 
+        // Captured before the entity is removed, since the row is the only record of
+        // where the image lives.
+        var profileImagePath = user.ProfileImagePath;
+
         _dbContext.Users.Remove(user);
         await _dbContext.SaveChangesAsync(cancellationToken);
+
+        // Deleted after the row is gone, so a storage failure leaves at most an orphaned
+        // blob rather than a live user pointing at a deleted image. DeleteAsync already
+        // tolerates a null path and swallows storage errors.
+        await _profileImageStorage.DeleteAsync(profileImagePath, cancellationToken);
 
         return NoContent();
     }

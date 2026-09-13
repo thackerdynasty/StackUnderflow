@@ -6,6 +6,8 @@
     var currentPage = (int)(ViewData["CurrentPage"] ?? 1);
     var totalPages = (int)(ViewData["TotalPages"] ?? 1);
     var pageSize = (int)(ViewData["PageSize"] ?? 10);
+    var searchTags = ViewData["SearchTags"] as IReadOnlyList<string> ?? Array.Empty<string>();
+    var requireAllTags = (bool)(ViewData["RequireAllTags"] ?? false);
 }
 
 <section class="questions-shell">
@@ -29,7 +31,18 @@
                 rank++;
                 <li class="leaderboard-entry rank-@rank">
                     <span class="leaderboard-rank" aria-label="Rank @rank">@rank</span>
-                    <span class="leaderboard-avatar">@entry.Initials</span>
+                    <span class="leaderboard-avatar">
+                        @if (entry.AvatarUrl is not null)
+                        {
+                            <img src="@entry.AvatarUrl" alt=""
+                                 onerror="this.style.display='none';this.nextElementSibling.style.display='flex';"/>
+                            <span class="leaderboard-avatar-initials" style="display:none;">@entry.Initials</span>
+                        }
+                        else
+                        {
+                            <span class="leaderboard-avatar-initials">@entry.Initials</span>
+                        }
+                    </span>
                     <div class="leaderboard-info">
                         <a class="leaderboard-name"
                            asp-controller="Profile" asp-action="Details" asp-route-id="@entry.UserId"
@@ -44,7 +57,25 @@
     <div class="question-toolbar">
         <div class="question-search">
             <form method="post">
-                <input name="query" value="@ViewData["query"]" placeholder="Search..."/>
+                <input name="query" value="@ViewData["SearchText"]" placeholder="Search..." aria-label="Search questions"/>
+                <button type="submit" class="visually-hidden">Search</button>
+                @if (searchTags.Count > 0)
+                {
+                    <div class="question-tags search-tags" aria-label="Selected search tags">
+                        @foreach (var tag in searchTags)
+                        {
+                            <span class="badge bg-secondary">
+                                @tag
+                                <input type="hidden" name="tags" value="@tag" />
+                                <button type="submit" name="removeTag" value="@tag" class="remove-search-tag" aria-label="Remove tag @tag">×</button>
+                            </span>
+                        }
+                    </div>
+                }
+                <label class="search-tag-mode">
+                    <input type="checkbox" name="requireAllTags" value="true" checked="@requireAllTags" />
+                    Require all tags
+                </label>
             </form>
         </div>
         <div class="question-tabs" aria-label="Question filters">
@@ -136,7 +167,8 @@
              data-current-page="@currentPage"
              data-total-pages="@totalPages"
              data-page-size="@pageSize"
-             data-search="@ViewData["Query"]">
+             data-search="@ViewData["Query"]"
+             data-require-all-tags="@requireAllTags.ToString().ToLowerInvariant()">
         </nav>
     }
 </section>

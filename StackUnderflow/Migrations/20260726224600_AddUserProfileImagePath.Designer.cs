@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using StackUnderflow.Data;
 
@@ -11,9 +12,11 @@ using StackUnderflow.Data;
 namespace StackUnderflow.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260726224600_AddUserProfileImagePath")]
+    partial class AddUserProfileImagePath
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -288,17 +291,8 @@ namespace StackUnderflow.Migrations
                     b.Property<int>("DownvoteCount")
                         .HasColumnType("int");
 
-                    b.Property<bool>("IsLocked")
-                        .HasColumnType("bit");
-
                     b.Property<bool>("IsSolved")
                         .HasColumnType("bit");
-
-                    b.Property<bool>("LockedByAdmin")
-                        .HasColumnType("bit");
-
-                    b.Property<DateTime?>("SolvedAt")
-                        .HasColumnType("datetime2");
 
                     b.Property<string>("Title")
                         .IsRequired()
@@ -370,58 +364,6 @@ namespace StackUnderflow.Migrations
                         .IsUnique();
 
                     b.ToTable("Tags");
-                });
-
-            modelBuilder.Entity("StackUnderflow.Models.ThreadReport", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("Details")
-                        .HasMaxLength(1000)
-                        .HasColumnType("nvarchar(1000)");
-
-                    b.Property<string>("ModeratorNotes")
-                        .HasMaxLength(1000)
-                        .HasColumnType("nvarchar(1000)");
-
-                    b.Property<string>("Reason")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.Property<DateTime>("ReportedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("ReporterId")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(450)");
-
-                    b.Property<int?>("Resolution")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime?>("ReviewedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("ReviewedById")
-                        .HasColumnType("nvarchar(450)");
-
-                    b.Property<int>("SUThreadId")
-                        .HasColumnType("int");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("ReviewedById");
-
-                    b.HasIndex("SUThreadId");
-
-                    b.HasIndex("ReporterId", "SUThreadId")
-                        .IsUnique();
-
-                    b.ToTable("ThreadReports");
                 });
 
             modelBuilder.Entity("StackUnderflow.Models.ThreadTag", b =>
@@ -502,9 +444,6 @@ namespace StackUnderflow.Migrations
                         .HasColumnType("nvarchar(256)");
 
                     b.Property<bool>("EmailConfirmed")
-                        .HasColumnType("bit");
-
-                    b.Property<bool>("IsModerator")
                         .HasColumnType("bit");
 
                     b.Property<DateTime>("JoinDate")
@@ -704,32 +643,6 @@ namespace StackUnderflow.Migrations
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("StackUnderflow.Models.ThreadReport", b =>
-                {
-                    b.HasOne("StackUnderflow.Models.User", "Reporter")
-                        .WithMany("SubmittedThreadReports")
-                        .HasForeignKey("ReporterId")
-                        .OnDelete(DeleteBehavior.NoAction)
-                        .IsRequired();
-
-                    b.HasOne("StackUnderflow.Models.User", "ReviewedBy")
-                        .WithMany("ReviewedThreadReports")
-                        .HasForeignKey("ReviewedById")
-                        .OnDelete(DeleteBehavior.NoAction);
-
-                    b.HasOne("StackUnderflow.Models.SUThread", "SUThread")
-                        .WithMany("Reports")
-                        .HasForeignKey("SUThreadId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Reporter");
-
-                    b.Navigation("ReviewedBy");
-
-                    b.Navigation("SUThread");
-                });
-
             modelBuilder.Entity("StackUnderflow.Models.ThreadTag", b =>
                 {
                     b.HasOne("StackUnderflow.Models.SUThread", "SUThread")
@@ -779,8 +692,6 @@ namespace StackUnderflow.Migrations
                 {
                     b.Navigation("Posts");
 
-                    b.Navigation("Reports");
-
                     b.Navigation("SavedBy");
 
                     b.Navigation("ThreadTags");
@@ -801,13 +712,9 @@ namespace StackUnderflow.Migrations
 
                     b.Navigation("Posts");
 
-                    b.Navigation("ReviewedThreadReports");
-
                     b.Navigation("SUThreads");
 
                     b.Navigation("SavedThreads");
-
-                    b.Navigation("SubmittedThreadReports");
 
                     b.Navigation("ThreadVotes");
                 });
