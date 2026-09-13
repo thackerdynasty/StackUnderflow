@@ -22,7 +22,13 @@ if (builder.Environment.IsDevelopment() &&
 var keyVaultUri = builder.Configuration["KeyVault:VaultUri"];
 if (!string.IsNullOrWhiteSpace(keyVaultUri))
 {
-    builder.Configuration.AddAzureKeyVault(new Uri(keyVaultUri), new DefaultAzureCredential());
+    var credential = new DefaultAzureCredential(new DefaultAzureCredentialOptions
+    {
+        // Skip the Managed Identity/IMDS probe locally — it hangs on machines where
+        // 169.254.169.254 isn't quickly refused. In Azure it IS available, so only exclude in dev.
+        ExcludeManagedIdentityCredential = builder.Environment.IsDevelopment()
+    });
+    builder.Configuration.AddAzureKeyVault(new Uri(keyVaultUri), credential);
 }
 
 // Add services to the container.
